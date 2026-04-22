@@ -7,53 +7,13 @@ AI(CV) 기반 협동 로봇(Doosan M0609)이 Intel RealSense로 레고 블록을
 
 ## 시스템 구조
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Admin UI (React + Vite)                                        │
-│  - 블록 배치 도면 입력 (Floor Plan)                              │
-│  - 공정률 모니터링 / 일시정지·재개                               │
-└──────────────────┬───────────────────────────────────────────────┘
-                   │ WebSocket (rosbridge_server)
-                   ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  Control PC  (Ubuntu 22.04 / ROS2 Humble)                       │
-│                                                                 │
-│  pick2build                                                     │
-│  ├── TopicListenerNode  ◄─── /dsr01/target_lego_pose ───────┐  │
-│  │   └── task_queue (블록 작업 목록 관리)                    │  │
-│  │                                                           │  │
-│  ├── RobotWorkerNode                                         │  │
-│  │   ├── brick_pick()     ──── /dsr01/detection_start ───►  │  │
-│  │   ├── brick_place()                                       │  │
-│  │   └── check_x_push_and_execute()                         │  │
-│  │                                                           │  │
-│  ├── ObjectDetectionNode  (Control PC 카메라, Stage 3용)     │  │
-│  │   └── /get_3d_position service (YOLO + MediaPipe)        │  │
-│  │                                                           │  │
-│  └── GetKeyword                                              │  │
-│      └── /get_keyword service (Whisper STT + GPT-4o)         │  │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                   DDS (ROS2 Topics via LAN)
-                                │
-┌───────────────────────────────▼─────────────────────────────────┐
-│  Detection PC  (Ubuntu 20.04 Docker / ROS Foxy)                 │
-│                                                                 │
-│  cobot2                                                         │
-│  └── FoundationPoseManager  (namespace: dsr01)                  │
-│      ├── RealSense 카메라 토픽 구독                              │
-│      ├── YOLO 블록 감지                                          │
-│      ├── FoundationPose 6-DoF 포즈 추적 (GPU)                   │
-│      └── /dsr01/target_lego_pose 발행 (안정화 후 1회)           │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                   Ethernet (192.168.1.100)
-                                │
-                    ┌───────────▼───────────┐
-                    │   Doosan M0609        │
-                    │   + OnRobot RG2       │
-                    └───────────────────────┘
-```
+![System Architecture](assets/system.png)
+
+---
+
+## 동작 플로우차트
+
+![Flowchart](assets/flowchart.jpg)
 
 ---
 
