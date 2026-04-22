@@ -42,5 +42,8 @@ outputs/
 *.task
 *.tflite
 
-# Session state (AI tooling internal)
+# Claude Code (AI tooling internal)
+.claude/
 memory/
+tasks/
+BRIEF.md
