@@ -212,6 +212,9 @@ cobot2_block_construction/
 │
 ├── ZIUM_Control/                        # Control PC 워크스페이스
 │   ├── requirements.txt                 # pip 의존성 (rosdep 미포함 패키지)
+│   ├── od_msg/                          # 커스텀 서비스 메시지 패키지
+│   │   └── srv/
+│   │       └── SrvDepthPosition.srv     # string target / float64[] depth_position
 │   └── pick2build/                      # ROS2 패키지 (ament_python)
 │       ├── launch/
 │       │   └── run_system.launch.py     # stage_place + detection + get_keyword 실행
@@ -234,8 +237,7 @@ cobot2_block_construction/
 │       ├── FoundationPose-main/
 │       │   ├── estimater.py             # FoundationPose 추정기 라이브러리
 │       │   ├── weights/
-│       │   │   ├── best.pt              # YOLO 블록 감지 모델 가중치
-│       │   │   └── T_gripper2camera.npy # 그리퍼↔카메라 외부 보정 행렬
+│       │   │   └── T_gripper2camera.npy # 그리퍼↔카메라 외부 보정 행렬 (best.pt는 gitignore)
 │       │   └── demo_data/lego/
 │       │       ├── cam_K.txt            # 카메라 내부 파라미터 (fallback)
 │       │       └── mesh/                # 블록 3D 메시 파일 (0.obj, 1.obj, 2.obj)
@@ -247,14 +249,9 @@ cobot2_block_construction/
 │       ├── App.jsx                      # 메인 React 컴포넌트
 │       └── main.jsx                     # 엔트리포인트
 │
-├── docs/
-│   ├── ros2_interface_spec.md           # 토픽·서비스 인터페이스 명세
-│   ├── package_structure.md             # 패키지 구조 및 의존성 목록
-│   ├── DEVELOPMENT_ROADMAP.md           # 개발 로드맵
-│   ├── flowchart.jpg                    # 시스템 플로우차트
-│   └── system.png                       # 시스템 구성도
+├── assets/
+│   ├── system.png                       # 시스템 구성도
+│   └── flowchart.jpg                    # 동작 플로우차트
 │
-├── CLAUDE.md                            # AI 개발 규칙
-├── BRIEF.md                             # 현재 작업 스펙
 └── .gitignore
-``` 
+```
