@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(curl -s \"https://raw.githubusercontent.com/Seooooooogi/M0609_RG2_Integration/feat/dual-camera-data-collection/README.md\")"
-    ]
-  }
-}
