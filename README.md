@@ -67,18 +67,14 @@ pip3 install -r ZIUM_Control/requirements.txt
 
 ## 의존성 패키지 설치
 
+`od_msg` (커스텀 서비스 메시지)는 이 레포지토리의 `ZIUM_Control/od_msg/`에 포함되어 있다.  
+`dsr_msgs2`는 아래 Doosan 패키지 안에 포함되어 있다.
+
 ```bash
-mkdir -p ~/cobot2_block_construction/ZIUM_Control/src
-cd ~/cobot2_block_construction/ZIUM_Control/src
+cd ~/cobot2_block_construction/ZIUM_Control
 
-# Doosan 공식 패키지
+# Doosan 공식 패키지 (dsr_msgs2 포함)
 git clone https://github.com/doosan-robotics/doosan-robot2
-
-# od_msg 커스텀 서비스 메시지 (SrvDepthPosition)
-git clone <od_msg 레포>
-
-# dsr_msgs2 커스텀 메시지
-git clone <dsr_msgs2 레포>
 ```
 
 ---
