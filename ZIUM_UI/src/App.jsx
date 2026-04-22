@@ -17,7 +17,7 @@ const CANVAS_H = 1200; // 24칸
 const GRID_SIZE = 50; 
 
 // ROS 통신 및 토픽 설정
-const ROS_BRIDGE_URL = 'ws://192.168.1.32:9090'; // 상황에 맞게 IP 수정 필요
+const ROS_BRIDGE_URL = 'ws://192.168.1.250:9090'; // 상황에 맞게 IP 수정 필요
 const CMD_TOPIC_NAME = '/block/info'; // 봇이 구독하는 토픽명으로 수정 필요
 
 const BlueprintEditor = () => {
