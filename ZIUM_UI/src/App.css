@@ -1,0 +1,1148 @@
+/* --- 헤더 로고 및 제목 스타일 --- */
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex: 1; /* 왼쪽 공간 차지 */
+}
+
+/* --- 중앙 관리 구역 레이아웃 --- */
+.center-management-zone {
+  flex: 1.5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px; /* 파일 버튼과 진행률 바 사이의 여유 공간 */
+  padding: 10px 0;
+}
+
+/* 헤더 전체 배경색을 로고의 어두운 남색 계열로 바꾸고 싶다면 추가 */
+.header {
+  display: flex;
+  justify-content: space-between; /* 요소들을 양 끝과 가운데로 배치 */
+  align-items: center;
+  padding: 0px 40px;
+  background-color: #1a1a1d;
+  border-bottom: 1px solid #333;
+  height: 160px !important; /* 헤더 높이 고정 */
+}
+
+/* 헤더 파일 버튼 스타일 */
+.header-file-controls {
+  display: flex;
+  gap: 12px;
+}
+
+.header-file-btn {
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: #333;
+  color: #ddd;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-file-btn.save:hover { background-color: #444; color: #81c784; border-color: #81c784; }
+.header-file-btn.load:hover { background-color: #444; color: #64b5f6; border-color: #64b5f6; }
+
+.project-logo {
+  width: 110px;    /* 로고 크기 조절 */
+  height: 110px;
+  object-fit: contain;
+  border-radius: 10px; /* 살짝 둥글게 */
+  border: 1px solid #444;
+}
+
+.title-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.main-title {
+  font-size: 60px !important;
+  font-weight: 900;
+  letter-spacing: 2px;
+  margin: 0 !important;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.sub-title {
+  font-size: 12px;
+  color: #888;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.project-container {
+  display: flex;
+  flex-direction: column;
+  /* 뷰포트 높이에 딱 맞게 설정하고 넘침 방지 */
+  height: 100vh;
+  width: 100vw;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #1e1e1e;
+  color: white;
+  overflow: hidden; /* 전체 페이지 스크롤 방지 */
+}
+
+.robot-controls {
+  flex: 1;
+  display: flex;
+  flex-direction: row; /* 상태창들과 버튼을 가로로 배치 */
+  align-items: stretch; /* 높이를 동일하게 맞춤 */
+  gap: 20px;
+  justify-content: flex-end;
+  
+}
+
+/* --- 상태 모니터링 섹션 --- */
+.status-monitor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: center;
+  height: 140px;
+}
+
+/* --- 이미지 스타일을 반영한 새로운 상태 박스 --- */
+.status-card {
+  /* ✅ 1. 모서리 둥글게 설정 */
+  border-radius: 8px;           
+  
+  /* ✅ 2. 내부 레이아웃 설정 */
+  padding: 10px 18px;
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  
+  /* 쉐도우는 부드럽게 유지 */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  
+  /* 배경 그라데이션이 테두리를 넘지 않도록 설정 */
+  overflow: hidden; 
+  border: 1px solid rgba(255, 255, 255, 0.05); /* 미세한 외곽선 추가 */
+  
+  /* 기존 border-left는 유지하되 둥근 모서리에 맞춰 조정 */
+  border-left: 4px solid currentColor;
+}
+
+/* 상단 작은 라벨 (SYSTEM STATE 등) */
+.status-card .card-label {
+  font-size: 10px;
+  color: #888;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* 하단 큰 상태 값 */
+.status-card .card-value {
+  font-size: 16px;
+  font-weight: 500;
+  color: #fff !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 우측 끝 작은 상태 표시 점 (옵션) */
+.status-card::after {
+  content: '';
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  background-color: currentColor; 
+  border-radius: 50%;
+  box-shadow: 0 0 8px currentColor;
+  opacity: 0.9;
+}
+
+/* ROS 연결 카드 (파란색 계열) */
+.status-card.ros-card { 
+  flex: 1; 
+  min-height: 40px;
+  border-left-color: #3498db; 
+  color: #3498db; /* 우측 점 색상 */
+  background: linear-gradient(90deg, rgba(52, 152, 219, 0.15) 0%, rgba(30, 30, 30, 1) 100%);
+}
+
+/* 작업 상태 카드 (노란색 계열) */
+.status-card.work-card { 
+  flex: 2;
+  border-left-color: #f1c40f; 
+  color: #f1c40f; 
+  background: linear-gradient(90deg, rgba(241, 196, 15, 0.15) 0%, rgba(30, 30, 30, 1) 100%);
+}
+
+/* 작업 완료 시 라인 색상 변경 */
+.status-card.completed-card { 
+  border-left-color: #2ecc71; 
+  color: #2ecc71; 
+  background: linear-gradient(90deg, rgba(46, 204, 113, 0.15) 0%, rgba(30, 30, 30, 1) 100%);
+}
+
+/* 에러 발생 시 라인 색상 변경 */
+.status-card.error-card { 
+  border-left-color: #e74c3c; 
+  color: #e74c3c; 
+  background: linear-gradient(90deg, rgba(231, 76, 60, 0.15) 0%, rgba(30, 30, 30, 1) 100%);
+}
+
+/* --- 3. 버튼 레이아웃 섹션 --- */
+.control-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* 버튼 사이의 일정한 간격 */
+  justify-content: center;
+  width: 220px; /* 버튼들의 너비를 통일 */
+  height: 140px;
+}
+
+.publish-btn {
+  width: 100%;
+  padding: 15px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.2s ease;
+}
+
+.publish-btn:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.publish-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.main-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0; /* 중요: 내부 요소가 넘칠 때 부모를 키우지 않고 줄어들게 함 */
+}
+
+/* 확대/축소 배율이 적용되는 레이어 */
+.zoom-wrapper {
+  position: absolute;
+  top: 25px;
+  left: 30px;
+  z-index: 1;
+  transform-origin: 0 0; /* 좌측 상단을 기준으로 확대/축소 */
+  width: 2000px;
+  height: 1200px;
+  transition: transform 0.1s ease-out; /* 줌 이동을 부드럽게 */
+  flex-shrink: 0;
+}
+
+.scroll-boundary {
+  position: relative;
+}
+
+/* 도면 영역 */
+.canvas-area {
+  flex: 3;
+  position: relative;
+  background-color: #2d2d2d;
+  overflow: auto;
+  cursor: crosshair;
+  padding: 0 !important;
+}
+
+.grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  min-width: 2000px; 
+  min-height: 1200px;
+  background-image: 
+    /* 1. 중앙 십자 중심선 (가장 진함) */
+    linear-gradient(90deg, rgba(255, 255, 255, 0.4) 2px, transparent 2px),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.4) 2px, transparent 2px),
+    
+    /* 2. 5칸마다 강조선 (중간 진함 - 250px 간격) */
+    linear-gradient(90deg, rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+    
+    /* 3. 기본 1칸 격자선 (가장 연함 - 50px 간격) */
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+
+    /* 4. 25px 간격 보조 점선 (새로 추가) */
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+
+  background-size: 
+  2000px 1200px, 2000px 1200px, /* 중심선은 반복되지 않도록 전체 크기로 설정 */
+  250px 250px, 250px 250px,     /* 5칸 단위 */
+  50px 50px, 50px 50px,         /* 1칸 단위 */
+  25px 25px, 25px 25px;         /* 0.5칸 단위 */
+
+  /* background-position: 
+  1000px 0, 0 600px,
+  0 0, 0 0,
+  0 0, 0 0, 
+  0 0, 0 0; */
+  background-position: 0 0;
+
+  background-repeat: no-repeat, no-repeat,
+  repeat, repeat,
+  repeat, repeat,
+  repeat, repeat;
+
+  /* 작업 영역의 끝을 보여주는 테두리 */
+  border: 2px solid #444;
+  box-sizing: border-box;
+
+  margin: 0;
+}
+
+.placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #666;
+}
+
+/* --- 캔버스에 배치된 블록 스타일 --- */
+.placed-block {
+  position: absolute;
+  /* box-sizing: border-box; <-- 테두리 두께만큼 블록이 작아보이지 않게 제거 */
+  border-radius: 4px;
+  /* 기본 그림자 */
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: grab;
+  /* 테두리 변경 시 부드럽게 전환되도록 transition 추가 */
+  transition: transform 0.1s, box-shadow 0.2s, border-color 0.2s; 
+  z-index: 10;
+  /* border: 2px solid transparent; <-- 기본 투명 테두리 추가 (선택/도움 시 색상만 변경) */
+}
+
+/* --- 사람의 도움(Help) 상태일 때의 테두리 발광 효과 --- */
+.placed-block.help-active {
+  /* 밖으로 퍼지는 box-shadow 대신, 블록 안쪽으로 그려지는 outline 사용 */
+  outline: 4px inset #ff007f; /* 네온 핑크색 선을 안쪽으로 생성 */
+  outline-offset: -4px;      /* 선이 밖으로 나가지 않도록 안으로 밀어넣음 */
+  
+  /* 기존의 box-shadow(발광 효과)는 제거하여 들뜨는 느낌을 없앱니다. */
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.3); 
+  
+  z-index: 15;
+}
+
+/* 선택되었을 때의 테두리 (파란색) */
+.placed-block.selected {
+  outline: 4px solid #3498db;
+  outline-offset: -4px;
+  z-index: 20;
+}
+
+/* --- 캔버스 블록 위의 도움 필요 아이콘 --- */
+.help-indicator {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  font-size: 18px;
+  background-color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+  z-index: 30;
+  pointer-events: none; /* 클릭 방해 안 함 */
+}
+
+/* 돌기(Pegs)를 감싸는 컨테이너 - CSS 변수 활용 */
+.pegs-container {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  padding: 6px; /* 블록 내부 여백 */
+  gap: 4px;    /* 돌기 간 간격 */
+  box-sizing: border-box;
+  /* JSX에서 넘겨준 --w, --h 변수로 그리드 생성 */
+  grid-template-columns: repeat(var(--w), 1fr);
+  grid-template-rows: repeat(var(--h), 1fr);
+}
+
+/* 레고 돌기 디자인 */
+.lego-peg {
+  width: 80%;
+  height: 80%;
+  margin: auto;
+  background-color: rgba(0, 0, 0, 0.12); /* 블록 색상과 자연스럽게 섞임 */
+  border-radius: 50%;
+  box-shadow: 
+    inset 1px 1px 2px rgba(255, 255, 255, 0.3),
+    1px 1px 2px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+/* 드래그 중인 블록 투명도 */
+.placed-block:active {
+  opacity: 0.6;
+}
+
+.edit-controls {
+  background-color: #3e3e42;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  border: 1px solid #555;
+}
+
+.selected-text {
+  color: #f1c40f;
+  font-weight: bold;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.delete-btn {
+  width: 100%;
+  padding: 8px;
+  background-color: #ff4757;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 5px;
+}
+
+.delete-btn:hover {
+  background-color: #ff6b81;
+}
+
+/* 사이드바 */
+.sidebar {
+  flex: 1;
+  background-color: #252526;
+  padding: 1rem;
+  border-left: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 2. Materials 제목 크기 및 마진 줄이기 (사이드바 내부 h2/h3 타겟) */
+.sidebar h2, .sidebar h3 {
+  font-size: 1.1rem; /* 글자 크기 축소 */
+  margin: 0 0 0.5rem 0; /* 위아래 여백 최소화 */
+  font-weight: 600;
+  color: #fff;
+}
+
+.block-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 0.5rem; /* 기존 1rem에서 축소 */
+  overflow-y: auto;
+  padding-right: 5px;
+  align-content: start;
+  flex: 1;
+}
+.block-list::-webkit-scrollbar {
+  width: 6px;
+}
+.block-list::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 3px;
+}
+
+.draggable-block {
+  padding: 10px 15px;
+  background-color: #3e3e42;
+  margin-bottom: 0px;
+  border-radius: 8px;
+  cursor: grab;
+  font-size: 13px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 15px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.draggable-block:hover {
+  background-color: #4e4e52;
+  border-color: #666;
+  transform: translateY(-2px);
+}
+
+.draggable-block:active {
+  cursor: grabbing;
+}
+
+/* 블록 모양을 미리 보여주는 프리뷰 아이콘 */
+.block-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 프리뷰 박스의 고정 영역 */
+  width: 50px; 
+  height: 50px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+/* 실제 비율을 반영한 작은 도형 */
+.preview-shape {
+  border-radius: 2px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* 블록 라벨 스타일 */
+.block-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #ddd;
+  word-break: keep-all;
+}
+
+.status-panel {
+  margin-top: auto;
+  padding-top: 0.88rem;
+  border-top: 1px solid #333;
+  flex-shrink: 0;
+}
+
+.reset-btn {
+  width: 100%;
+  padding: 0.8rem;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.reset-btn:hover {
+  background-color: #c0392b;
+}
+
+@media (max-width: 768px) {
+  .main-layout {
+    flex-direction: column;
+  }
+  .sidebar {
+    max-width: 100%;
+    border-left: none;
+    border-top: 1px solid #333;
+    height: 300px; /* 아래쪽에 고정 높이 */
+  }
+}
+
+/* 드래그 가이드 프리뷰 */
+.drag-preview {
+  position: absolute;
+  border: 2px dashed;
+  box-sizing: border-box;
+  z-index: 5;
+  pointer-events: none; /* 드래그 이벤트를 통과시켜야 Drop이 작동함 */
+  transition: left 0.05s ease, top 0.05s ease;
+}
+
+/* 배치 가능 상태 */
+.drag-preview.valid {
+  border-color: #2ecc71;
+  background-color: rgba(46, 204, 113, 0.2);
+}
+
+/* 배치 불가 상태 (충돌) */
+.drag-preview.invalid {
+  border-color: #e74c3c;
+  background-color: rgba(231, 76, 60, 0.3);
+}
+
+.center-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  background-color: #39ff14;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  /* 점이 잘 보이도록 바깥에 어두운 테두리 효과 */
+  box-shadow: 
+    0 0 5px #00ff00, 
+    0 0 10px #00ff00, 
+    0 0 2px rgba(0, 0, 0, 0.9); /* 검정색 테두리로 대비 강화 */
+  pointer-events: none;
+}
+
+/* 프리뷰용 중심점 (가이드) */
+.center-dot.guide {
+  width: 8px;
+  height: 8px;
+  background-color: #f0fff0;
+  box-shadow: 
+    0 0 8px #00ff00, 
+    0 0 20px #00ff00, 
+    0 0 35px rgba(0, 255, 0, 0.6);
+  pointer-events: none;
+
+  /* 깜빡이는 애니메이션 추가 (선택 사항 - 더 눈에 띄게 하고 싶을 때) */
+  animation: neon-pulse 1.5s infinite;
+}
+
+/* 네온 깜빡임 애니메이션 정의 */
+@keyframes neon-pulse {
+  0% { opacity: 1; filter: brightness(1); }
+  50% { opacity: 0.7; filter: brightness(1.5); }
+  100% { opacity: 1; filter: brightness(1); }
+}
+
+/* 배치된 블록 내 텍스트 선택 방지 */
+.block-text {
+  user-select: none;
+  pointer-events: none;
+}
+
+/* --- 좌표축(Ruler) 스타일 --- */
+.label-container {
+  position: relative;
+}
+
+.ruler-corner {
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 30px;
+  height: 25px;
+  background-color: #1e1e1e;
+  border-right: 1px solid #555;
+  border-bottom: 1px solid #555;
+  z-index: 110;
+  border: none;
+  border-right: 1px solid #444;
+  border-bottom: 1px solid #444;
+}
+
+/* X축 고정 컨테이너 */
+.axis-x-sticky {
+  position: sticky;
+  top: 0;
+  left: 30px;
+  width: calc(100% - 30px);
+  height: 25px;
+  background-color: #2d2d2d; /* 반투명 배경으로 그리드 보임 */
+  border-bottom: 1px solid #555;
+  z-index: 100; /* 블록보다 위에 표시 */
+  margin-top: -25px;
+  pointer-events: none;
+  /* overflow: hidden; */
+  margin-left: 0;
+}
+
+/* Y축 고정 컨테이너 */
+.axis-y-sticky {
+  position: sticky;
+  top: 25px;
+  left: 0;
+  width: 30px;
+  height: 100%;
+  background-color: #2d2d2d;
+  border-right: 1px solid #555;
+  z-index: 100;
+  pointer-events: none;
+  overflow: hidden;
+  float: left; /* 레이아웃 정렬 */
+  /* margin-top: -25px; */
+}
+
+/* 좌표 라벨 공통 */
+.axis-label {
+  position: absolute;
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.axis-x-sticky .axis-label {
+  transform: translateX(-50%);
+  bottom: 4px;
+}
+
+.axis-y-sticky .axis-label {
+  transform: translateY(-50%);
+  right: 6px;
+  width: 30px;
+  text-align: right;
+  display: block;
+}
+
+/* X축: 숫자 아래에 위치 (상단 경계선) */
+.axis-x {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 20px;
+}
+
+.axis-x .axis-label {
+  transform: translateX(-50%); /* 숫자의 중앙이 선에 맞도록 */
+  top: 2px;
+}
+
+/* Y축: 숫자 오른쪽에 위치 (좌측 경계선) */
+.axis-y {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 20px;
+  height: 100%;
+}
+
+.axis-y .axis-label {
+  transform: translateY(-50%); /* 숫자의 중앙이 선에 맞도록 */
+  left: 5px;
+}
+
+/* 홀수/짝수 스타일 차별화 */
+.axis-label.even {
+  font-size: 11px;
+  font-weight: bold;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+  color: #39ff14; /* 형광색으로 강조 */
+}
+
+.axis-label.odd {
+  font-size: 8px;
+  font-weight: normal;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* 0점 위치(좌측 상단 구석) 예외 처리 */
+.axis-x .axis-label[style*="left: 0"] {
+  transform: none;
+  left: 5px !important;
+}
+
+
+/* --- 다중 레이어(Level) 탭 스타일 (엑셀 시트 형태) --- */
+.canvas-container {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  background-color: #2d2d2d;
+  min-width: 0;
+}
+
+.canvas-area {
+  flex: 1; /* 탭 영역을 제외한 나머지 공간 모두 차지 */
+  position: relative;
+  overflow: auto;
+  cursor: crosshair;
+  padding: 0;
+}
+
+.level-tabs {
+  display: flex;
+  align-items: flex-end;
+  background-color: #1e1e1e;
+  border-top: 1px solid #444;
+  padding: 8px 10px 0 10px;
+  gap: 5px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  height: 45px;
+  box-sizing: border-box;
+}
+
+.level-tab {
+  padding: 8px 18px;
+  background-color: #333;
+  color: #aaa;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  border-bottom: none;
+}
+
+.level-tab:hover:not(.active) {
+  background-color: #444;
+  color: #fff;
+}
+
+.level-tab.active {
+  background-color: #2d2d2d;
+  color: #39ff14; /* 형광 그린 강조 */
+  border-color: #555;
+  box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
+  padding-top: 10px; /* 활성화된 탭이 살짝 더 튀어나오게 */
+}
+
+.level-tab.add-btn {
+  background-color: transparent;
+  color: #4caf50;
+  border: 1px dashed #4caf50;
+  border-radius: 6px;
+  margin-left: 10px;
+  margin-bottom: 6px;
+  padding: 6px 12px;
+}
+
+.level-tab.add-btn:hover {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: #81c784;
+}
+
+/* --- 이전 층(고스트) 블록 스타일 --- */
+.ghost-block {
+  opacity: 0.3; /* 반투명하게 */
+  filter: grayscale(80%); /* 색상을 약간 죽여서 구별되게 */
+  pointer-events: none; /* 클릭이나 드래그 방지 */
+  z-index: 5;
+  border: 2px dashed rgba(255, 255, 255, 0.5);
+}
+
+/* --- 상단 진행률 바 (Progress Bar) 스타일 --- */
+.progress-container {
+  flex: 1.2;
+  margin: 0 !important;
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 16px !important;
+  font-weight: bold;
+  color: #888;
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 24px;
+  background-color: #3e3e42;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+  border: 1px solid #222;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: #4caf50;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  /* 스트라이프(빗금) 패턴 배경 */
+  background-image: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.2) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.2) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 30px 30px;
+  animation: move-stripes 1s linear infinite;
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+@keyframes move-stripes {
+  from { background-position: 0 0; }
+  to { background-position: 30px 0; }
+}
+
+/* --- 배치 완료된 블록 시각화 스타일 --- */
+.placed-block.completed {
+  border: 2px solid #39ff14; /* 형광 연두색 테두리 */
+  box-shadow: 0 0 15px rgba(57, 255, 20, 0.6), inset 0 0 10px rgba(57, 255, 20, 0.3);
+  filter: brightness(1.2);
+}
+
+/* 완료된 블록 중앙에 체크마크 표시 */
+.placed-block.completed::after {
+  content: '✔';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #39ff14;
+  font-size: 20px;
+  font-weight: 900;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.9); /* 글씨가 잘 보이도록 그림자 추가 */
+  z-index: 30;
+  pointer-events: none;
+}
+
+/* 고스트 블록이면서 완료된 경우 (아래층 완성 확인용) */
+.ghost-block.completed {
+  border-color: #39ff14;
+  opacity: 0.5;
+}
+
+/* --- 그리퍼 파지 위치(Grip Lines) 시각화 --- */
+.grip-line {
+  position: absolute;
+  background-color: rgba(255, 255, 255, 0.75); /* 눈에 살짝 띄는 반투명 하얀색 */
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.5); /* 배경색과 대비를 위한 그림자 */
+  border-radius: 2px;
+  z-index: 25;
+  pointer-events: none; /* 드래그 방해 안 되게 통과 */
+}
+
+/* 세로형 블록 (넓은 면이 좌/우) */
+.grip-line.v-left {
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 35%; /* 블록 높이의 35% 크기 */
+}
+
+.grip-line.v-right {
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 35%;
+}
+
+/* 가로형 블록 (넓은 면이 상/하) */
+.grip-line.h-top {
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 4px;
+  width: 35%; /* 블록 너비의 35% 크기 */
+}
+
+.grip-line.h-bottom {
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 4px;
+  width: 35%;
+}
+
+/* --- 사람의 도움(Help) 버튼 및 인디케이터 스타일 --- */
+.help-btn {
+  width: 100%;
+  padding: 8px;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 5px;
+  transition: background-color 0.2s;
+  font-weight: bold;
+}
+
+.help-btn.active {
+  background-color: #f39c12; /* 주황색 (도움 켜짐) */
+}
+
+.help-btn.inactive {
+  background-color: #7f8c8d; /* 회색 (도움 꺼짐) */
+}
+
+.help-btn.active:hover { background-color: #e67e22; }
+.help-btn.inactive:hover { background-color: #95a5a6; }
+
+/* --- 상태 표시 배지 스타일 --- */
+.status-dashboard {
+  min-width: 180px;
+  padding: 12px 16px;
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom:4px;
+  font-weight: bold;
+}
+
+.status-label {
+  color: #aaa;
+  margin-right: 15px;
+}
+
+/* 작업 상태별 텍스트 색상 포인트 */
+.state-waiting { color: #95a5a6; }
+.state-working { color: #3498db; }
+.state-paused { color: #e74c3c; }
+.state-resuming { color: #f1c40f; }
+.state-completed { color: #2ecc71; text-shadow: 0 0 5px rgba(46, 204, 113, 0.5); }
+
+/* --- 작업 상태 가시성 강화 배지 스타일 --- */
+.status-badge {
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-weight: 900;
+  font-size: 16px;
+  text-align: center;
+  min-width: 100px;
+  display: inline-block;
+  transition: all 0.3s ease;
+}
+
+/* 상태별 배경색 및 글자색 정의 */
+.state-waiting { background-color: #444; color: #aaa; }
+.state-working { background-color: rgba(52, 152, 219, 0.2); color: #3498db; border: 1px solid #3498db; }
+.state-paused { background-color: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid #e74c3c; }
+.state-resuming { background-color: rgba(241, 196, 15, 0.2); color: #f1c40f; border: 1px solid #f1c40f; }
+.state-completed { 
+  background-color: #2ecc71; 
+  color: #ffffff; 
+  box-shadow: 0 0 10px rgba(46, 204, 113, 0.6); 
+}
+
+/* 토글 스위치 전체 컨테이너 */
+.toggle-switch-container {
+  flex: 2;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #2a2a2a; /* 기본 어두운 배경 */
+  border-radius: 15px;
+  padding: 5px;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.5); /* 안으로 파인 효과 */
+  perspective: 1000px;
+}
+
+/* 배경 텍스트 레이어 */
+.switch-label {
+  flex: 1;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: #555;
+  z-index: 1;
+  transition: color 0.3s;
+}
+
+/* 움직이는 스위치 핸들 */
+.switch-handle {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: calc(50% - 5px);
+  height: calc(100% - 10px);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 18px;
+  color: white;
+  z-index: 2;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* --- 상태별 스위치 스타일 --- */
+
+/* 1. Stop 상태 (왼쪽) */
+.state-stop .switch-handle {
+  transform: translateX(0);
+  background-color: #e74c3c; /* 빨간색 유지 */
+  /* 입체감 효과: 오른쪽으로 살짝 기울어지며 튀어나옴 */
+  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.4), inset -2px 0 5px rgba(255, 255, 255, 0.2);
+}
+
+.state-stop .stop-label { color: transparent; } /* 핸들에 가려질 때 텍스트 숨김 */
+.state-stop .start-label { color: #2ecc71; opacity: 0.5; } /* 안 눌린 쪽은 연하게 */
+
+/* 2. Start 상태 (오른쪽) */
+.state-start .switch-handle {
+  transform: translateX(100%);
+  background-color: #2ecc71; /* 초록색 유지 */
+  /* 입체감 효과: 왼쪽으로 살짝 기울어지며 튀어나옴 */
+  box-shadow: -4px 0 10px rgba(0, 0, 0, 0.4), inset 2px 0 5px rgba(255, 255, 255, 0.2);
+}
+
+.state-start .start-label { color: transparent; }
+.state-start .stop-label { color: #e74c3c; opacity: 0.5; }
+
+/* 눌리지 않은 쪽의 버튼 면이 기울어져 보이게 하는 디테일 (Container에 추가) */
+.toggle-switch-container {
+  perspective: 1000px;
+}
+
+/* 마우스 호버 시 효과 */
+.toggle-switch-container:hover .switch-handle {
+  filter: brightness(1.1);
+}
+
+.btn-unlock.standard {
+  flex: 1;
+  width: 100%;
+  height: 40px; /* 적절한 높이 고정 */
+  background-color: #f1c40f !important; /* 노란색 강제 적용 */
+  color: #000 !important; /* 글자 검정색 */
+  border-radius: 12px;
+  border: none;
+  font-size: 16px !important;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.btn-unlock.standard:hover {
+  background-color: #f39c12 !important;
+  transform: translateY(-1px);
+}
+
+.btn-unlock.standard:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}

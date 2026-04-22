@@ -1,0 +1,46 @@
+# Environment
+.env
+.env.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# ROS2 build artifacts
+build/
+install/
+log/
+
+# Node / React
+node_modules/
+dist/
+.next/
+*.log
+npm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+
+# Docker
+.dockerignore
+
+# Outputs & logs
+outputs/
+*.jsonl
+
+# Model weights (large files)
+*.pth
+*.onnx
+*.engine
+*.pt
+*.task
+*.tflite
+
+# Session state (AI tooling internal)
+memory/
