@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 // import * as ROSLIB from 'roslib';
 import './App.css';
+import logoImg from './logo.png';
 
 const BLOCK_TYPES = [
   { id: 'b1x2', label: '1 X 2 (세로)', w: 1, h: 2, color: '#9b59b6' },
@@ -596,7 +597,7 @@ const saveBlueprintToFile = () => {
       <header className="header">
         {/* 1. 좌측 로고 영역 */}
         <div className="logo-section">
-          <img src="./logo.png" alt="JIUM Logo" className="project-logo" />
+          <img src={logoImg} alt="JIUM Logo" className="project-logo" />
           <div className="title-group">
             <h1 className="main-title">JIUM</h1>
             <span className="sub-title">Blueprint Designer</span>
