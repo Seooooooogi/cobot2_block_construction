@@ -1,0 +1,67 @@
+# Robot calibration and physical parameters for JIUM pick2build
+# Edit this file to recalibrate without rebuilding the package.
+
+poses:
+  go_home:          [0.051, 6.463, 54.335, -0.066, 119.191, 0.028]
+  brick_approach:   [-128.53, 13.51, 69.47, -0.05, 97.03, 140.00]
+  vision_scan_1:    [100.88, 4.44, 57.62, -0.01, 118.14, 100.60]
+  vision_scan_2:    [161.509, 18.008, 65.921, 0.07, 95.456, 251.794]
+  vision_pos:       [-473.049, 149.734, 201.853, 175.522, 179.372, -94.333]
+  hand_delivery_scan: [571.966, -10.213, 232.007, 129.30, 179.96, 129.15]
+
+# block_type keys match the string values received on /block/info
+block_types:
+  "1":
+    block_id: 0
+    coord: [579.61, -10.213, 83.007, 129.30, 179.96, 129.15]
+    pick_force: 20
+    pick_periodic: [0.5, 1.5, 0.0, 0.0, 0.0, 2.0]
+    place_force: 20
+    place_rz: 39.15
+    place_period: [1.0, 0.3, 0.0, 0.0, 0.0, 1.0]
+  "2":
+    block_id: 0
+    coord: [579.61, -10.213, 83.007, 129.30, 179.96, 129.15]
+    pick_force: 20
+    pick_periodic: [0.5, 1.5, 0.0, 0.0, 0.0, 2.0]
+    place_force: 20
+    place_rz: 129.15
+    place_period: [0.3, 1.0, 0.0, 0.0, 0.0, 1.0]
+  "3":
+    block_id: 1
+    coord: [571.966, -10.213, 82.007, 129.30, 179.96, 129.15]
+    pick_force: 19
+    pick_periodic: [1.0, 1.0, 0.0, 0.0, 0.0, 2.0]
+    place_force: 19
+    place_rz: 39.15
+    place_period: [0.5, 0.5, 0.0, 0.0, 0.0, 1.0]
+  "4":
+    block_id: 1
+    coord: [571.966, -10.213, 82.007, 129.30, 179.96, 129.15]
+    pick_force: 19
+    pick_periodic: [1.0, 1.0, 0.0, 0.0, 0.0, 2.0]
+    place_force: 19
+    place_rz: 129.15
+    place_period: [0.5, 0.5, 0.0, 0.0, 0.0, 1.0]
+  "5":
+    block_id: 2
+    coord: [571.21, -18.32, 82.007, 129.30, 179.96, 129.15]
+    pick_force: 22
+    pick_periodic: [1.5, 1.5, 0.0, 0.0, 0.0, 2.0]
+    place_force: 22
+    place_rz: 39.15
+    place_period: [1.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+  "6":
+    block_id: 2
+    coord: [571.21, -18.32, 82.007, 129.30, 179.96, 129.15]
+    pick_force: 22
+    pick_periodic: [1.5, 1.5, 0.0, 0.0, 0.0, 2.0]
+    place_force: 22
+    place_rz: 129.15
+    place_period: [1.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+
+place:
+  z_base: 103.507   # base Z height of first layer (mm)
+  z_step: 20.0      # height increment per block level (mm)
+  orient_rx: 129.30
+  orient_ry: 179.96

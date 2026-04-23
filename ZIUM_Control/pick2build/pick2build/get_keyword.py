@@ -10,14 +10,12 @@ from ament_index_python.packages import get_package_share_directory
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
-# from langchain.chains import LLMChain
 
 from std_srvs.srv import Trigger
 from pick2build.MicController import MicController, MicConfig
 from pick2build.stt import STT
 
 ############ Package Path & Environment Setting ############
-current_dir = os.getcwd()
 package_path = get_package_share_directory("pick2build")
 
 is_laod = load_dotenv(dotenv_path=os.path.join(f"{package_path}/resource/.env"))

@@ -24,6 +24,9 @@ setup(
             glob('pick2build/.env')           # pick2build 폴더 내 API Key
         ),
         
+        # 로봇 파라미터 설정 파일
+        (os.path.join('share', package_name, 'config'), glob('pick2build/config/*')),
+
         # 런치 파일 설치
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
     ],

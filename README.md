@@ -152,7 +152,7 @@ ros2 launch pick2build run_system.launch.py
 
 | 노드 | 역할 |
 |------|------|
-| `stage_place` | TopicListenerNode + RobotWorkerNode (pick/place/push) |
+| `stage_place` | TopicListenerNode (토픽 수신) + RobotWorkerNode (pick/place/push), RobotSharedState 공유 |
 | `detection` | ObjectDetectionNode — `/get_3d_position` 서비스 |
 | `get_keyword` | GetKeyword — `/get_keyword` 서비스 (STT + LLM) |
 
@@ -219,7 +219,11 @@ cobot2_block_construction/
 │       ├── launch/
 │       │   └── run_system.launch.py     # stage_place + detection + get_keyword 실행
 │       ├── pick2build/
-│       │   ├── stage_place.py           # 메인 오케스트레이터 (pick/place/push, 신호 처리)
+│       │   ├── stage_place.py           # 메인 오케스트레이터 (RobotWorkerNode: pick/place/push)
+│       │   ├── topic_listener.py        # TopicListenerNode — /block/info, 제어 신호 수신
+│       │   ├── shared_state.py          # RobotSharedState — 노드 간 공유 상태 (Queue, pause 플래그)
+│       │   ├── config/
+│       │   │   └── robot_params.yaml    # 로봇 좌표·force threshold·블록 파라미터 (캘리브레이션 설정)
 │       │   ├── detection.py             # 물체·손 감지 노드 (YOLO + MediaPipe)
 │       │   ├── get_keyword.py           # 음성 명령 추출 노드 (Whisper STT + GPT-4o)
 │       │   ├── realsense.py             # 카메라 토픽 구독 헬퍼 (ImgNode)
@@ -227,6 +231,8 @@ cobot2_block_construction/
 │       │   ├── stt.py                   # OpenAI Whisper STT 헬퍼
 │       │   ├── MicController.py         # PyAudio 마이크 스트림 관리
 │       │   └── onrobot.py               # RG2 그리퍼 Modbus TCP 제어
+│       ├── resource/
+│       │   └── .env                     # OPENAI_API_KEY, TOOLCHARGER_IP, TOOLCHARGER_PORT
 │       ├── package.xml
 │       └── setup.py
 │
