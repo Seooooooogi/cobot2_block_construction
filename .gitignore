@@ -2,6 +2,10 @@
 .env
 .env.local
 
+# Firebase secrets (never commit)
+serviceAccountKey.json
+**/serviceAccountKey.json
+
 # Python
 __pycache__/
 *.pyc

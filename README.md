@@ -17,6 +17,18 @@ AI(CV) 기반 협동 로봇(Doosan M0609)이 Intel RealSense로 레고 블록을
 
 ---
 
+## 브랜치 구성
+
+| 브랜치 | UI 통신 방식 | 설명 |
+|--------|------------|------|
+| `main` | rosbridge WebSocket | 기본 구성 — LAN 내 Control PC와 직접 통신 |
+| `feature/firebase-ui` | Firebase RTDB | Firebase 기반 — 인터넷을 통한 원격 제어 가능 |
+
+> 이 문서는 두 브랜치를 모두 다룹니다.  
+> Firebase 관련 내용은 **[Firebase UI 설정](#firebase-ui-설정-feature-firebase-ui-브랜치)** 섹션을 참고하세요.
+
+---
+
 ## 요구사항
 
 ### Control PC
@@ -167,6 +179,119 @@ npm run dev
 
 ---
 
+## Firebase UI 설정 (`feature/firebase-ui` 브랜치)
+
+rosbridge 대신 **Firebase Realtime Database**를 메시지 브로커로 사용하고,  
+**Firestore**에 설계도를 저장하며 **Google 로그인**을 지원하는 브랜치입니다.
+
+### 아키텍처
+
+```
+브라우저 (ZIUM_UI)
+    │  Firebase SDK
+    ▼
+Firebase Realtime Database          Firestore
+  jium/commands/block_info    ←→   blueprints/{uid}/...
+  jium/commands/signal_*
+  jium/status/completed_id
+    │  firebase-admin SDK
+    ▼
+firebase_bridge.py (Control PC)
+    │  rclpy publish/subscribe
+    ▼
+ROS2 토픽 (기존과 동일)
+```
+
+### 1단계 — Firebase 프로젝트 생성
+
+1. [console.firebase.google.com](https://console.firebase.google.com) → **프로젝트 추가**
+2. **Authentication** → 시작하기 → **Sign-in method** → `Google` → **사용 설정**
+   - 지원 이메일 입력 후 저장
+3. **Realtime Database** → 데이터베이스 만들기
+   - 위치: `asia-southeast1` (싱가포르, 한국 최저 레이턴시)
+   - 보안 규칙: **테스트 모드** (개발용, 30일 후 수동 갱신 필요)
+4. **Firestore Database** → 데이터베이스 만들기 → 보안 규칙에 아래 입력:
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{db}/documents {
+       match /blueprints/{doc} {
+         allow read, write: if request.auth.uid == resource.data.ownerUid;
+         allow create: if request.auth != null;
+       }
+     }
+   }
+   ```
+5. **프로젝트 설정** (톱니바퀴) → **일반** → 하단 **내 앱** → `</>` (웹 앱 추가)
+   - 앱 닉네임 입력 후 등록 → `firebaseConfig` 객체의 값을 복사
+
+### 2단계 — 환경변수 설정
+
+```bash
+cd ~/cobot2_block_construction/ZIUM_UI
+cp .env.example .env.local   # .env.local은 gitignore 처리됨
+```
+
+`.env.local`을 열어 Firebase 콘솔에서 복사한 값으로 교체:
+
+```env
+VITE_FIREBASE_API_KEY=AIzaSy...
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_DATABASE_URL=https://your-project-default-rtdb.asia-southeast1.firebasedatabase.app
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
+VITE_FIREBASE_APP_ID=1:123456789:web:abc...
+```
+
+### 3단계 — UI 실행
+
+```bash
+cd ~/cobot2_block_construction/ZIUM_UI
+npm install
+npm run dev        # 개발 서버: http://localhost:5173
+# npm run build && firebase deploy  # Firebase Hosting 배포 시
+```
+
+브라우저에서 **Google 로그인** 버튼 클릭 → 팝업에서 Google 계정 선택.
+
+> **localhost 인증 오류가 날 경우**: Firebase 콘솔 → Authentication → Settings →  
+> **Authorized domains**에 `localhost`가 있는지 확인 (기본으로 추가됨).
+
+### 4단계 — Control PC Firebase 브리지 실행
+
+ROS 토픽과 Firebase 사이를 연결하는 브리지 스크립트를 Control PC에서 실행합니다.
+
+```bash
+# 1. firebase-admin 설치
+pip3 install firebase-admin
+
+# 2. 서비스 계정 키 발급
+# Firebase 콘솔 → 프로젝트 설정 → 서비스 계정 → Python 선택
+# → 새 비공개 키 생성 → serviceAccountKey.json 다운로드
+# → ZIUM_Control/ 에 저장 (절대 커밋하지 말 것)
+
+# 3. 브리지 실행 (Control PC, ROS 환경 소싱 후)
+source /opt/ros/humble/setup.bash
+source ~/cobot2_block_construction/ZIUM_Control/install/setup.bash
+export GOOGLE_APPLICATION_CREDENTIALS=~/cobot2_block_construction/ZIUM_Control/serviceAccountKey.json
+export FIREBASE_DATABASE_URL=https://your-project-default-rtdb.asia-southeast1.firebasedatabase.app
+python3 ~/cobot2_block_construction/ZIUM_Control/firebase_bridge.py
+```
+
+### Firebase UI 전체 실행 순서
+
+```
+[Detection PC]  Docker → ros2 run cobot2 foundation_pose
+[Control PC]    ros2 launch pick2build run_system.launch.py
+[Control PC]    python3 ZIUM_Control/firebase_bridge.py
+[개발 PC/원격]  cd ZIUM_UI && npm run dev
+```
+
+rosbridge(`ros2 launch rosbridge_server ...`)는 이 브랜치에서 **불필요**합니다.
+
+---
+
 ## ROS2 토픽 인터페이스
 
 ### Control PC ↔ Detection PC
@@ -178,15 +303,27 @@ npm run dev
 
 `pose_code`: `0.0`=UPRIGHT, `1.0`=INVERTED, `2.0`=SIDE, `3.0`=FRONT
 
-### Admin UI ↔ Control PC (rosbridge WebSocket)
+### Admin UI ↔ Control PC
+
+**`main` 브랜치 — rosbridge WebSocket**
 
 | 토픽 | 타입 | 방향 | 설명 |
 |------|------|------|------|
 | `/block/info` | `std_msgs/String` (JSON) | UI → Control | 블록 배치 도면 정보 |
-| `/signal_id` | `std_msgs/Int32` | UI → Control | 작업 시작 신호 |
+| `/signal_id` | `std_msgs/Int32` | Control → UI | 배치 완료된 블록 ID |
 | `/signal_stop` | `std_msgs/Int32` | UI → Control | 일시정지 |
 | `/signal_start` | `std_msgs/Int32` | UI → Control | 재개 |
 | `/signal_unlock` | `std_msgs/Int32` | UI → Control | 강제 재개 (E-Stop 해제) |
+
+**`feature/firebase-ui` 브랜치 — Firebase RTDB (`firebase_bridge.py` 경유)**
+
+| RTDB 경로 | 방향 | 대응 ROS 토픽 |
+|-----------|------|--------------|
+| `jium/commands/block_info` | UI → Control | `/block/info` |
+| `jium/commands/signal_stop` | UI → Control | `/signal_stop` |
+| `jium/commands/signal_start` | UI → Control | `/signal_start` |
+| `jium/commands/signal_unlock` | UI → Control | `/signal_unlock` |
+| `jium/status/completed_id` | Control → UI | `/signal_id` |
 
 ### pick2build 내부 서비스
 
