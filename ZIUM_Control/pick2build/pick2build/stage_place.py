@@ -3,8 +3,6 @@ import rclpy
 from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
-from std_srvs.srv import Trigger
-
 from od_msg.srv import SrvDepthPosition
 from ament_index_python.packages import get_package_share_directory
 from dsr_msgs2.srv import SetRobotControl
@@ -56,9 +54,6 @@ class RobotWorkerNode(Node):
 
         self.GO_HOME = cfg['poses']['go_home']
         self.BRICK_APPROACH = cfg['poses']['brick_approach']
-        self.VISION_SCAN_1 = cfg['poses']['vision_scan_1']
-        self.VISION_SCAN_2 = cfg['poses']['vision_scan_2']
-        self.VISION_POS = cfg['poses']['vision_pos']
         self.HAND_DELIVERY_SCAN = cfg['poses']['hand_delivery_scan']
         self.BLOCK_CFG = cfg['block_types']
         self.PLACE_CFG = cfg['place']
@@ -71,7 +66,6 @@ class RobotWorkerNode(Node):
         self.srv_control = self.create_client(SetRobotControl, f'/{ROBOT_ID}/system/set_robot_control')
 
         self.cb_group = ReentrantCallbackGroup()
-        self.stt_client = self.create_client(Trigger, '/get_keyword', callback_group=self.cb_group)
         self.vision_client = self.create_client(SrvDepthPosition, 'get_3d_position', callback_group=self.cb_group)
 
     def movel2(self, *args, **kwargs):
@@ -257,141 +251,6 @@ class RobotWorkerNode(Node):
         point = np.array([[[u, v]]], dtype=np.float32)
         t_point = cv2.perspectiveTransform(point, H)
         return t_point[0][0][0], t_point[0][0][1]
-
-    def check_x_push_and_execute(self, block_id):
-        from DSR_ROBOT2 import (
-            posx, posj, wait, mwait,
-            set_ref_coord, task_compliance_ctrl, set_stiffnessx,
-            get_tool_force, DR_BASE, release_compliance_ctrl,
-            get_current_posx, DR_MV_MOD_REL
-        )
-        self.check_pause()
-        self.get_logger().info("1초 대기: 로봇을 X방향으로 살짝 밀면 음성 인식(시동어) 대기 상태가 됩니다.")
-
-        msg = Int32()
-        msg.data = block_id
-
-        set_ref_coord(1); task_compliance_ctrl()
-        set_stiffnessx([50.0, 300.0, 300.0, 200.0, 200.0, 200.0], time=0.0)
-
-        start_t = time.time()
-        triggered = False
-
-        while rclpy.ok() and (time.time() - start_t) < 5.0:
-            self.check_pause(2)
-            force = get_tool_force(DR_BASE)
-            if abs(force[0]) > 10.0:
-                triggered = True
-                break
-            wait(0.05)
-
-        release_compliance_ctrl(); set_ref_coord(0)
-        mwait()
-
-        if triggered:
-            current_pos, _ = get_current_posx(0)
-            current_z = current_pos[2]
-            if current_z <= 300.0:
-                self.movel2(posx([0.00, 0.00, +200.00, 0.00, 0.00, 0.00]), vel=VELOCITY, acc=ACC, ref=0, mod=DR_MV_MOD_REL)
-                mwait()
-            self.get_logger().info("X축 밀기 감지 완료! 삐- 소리 후 원하시는 도구를 말씀해 주세요.")
-            print("\a")
-
-            if not self.stt_client.wait_for_service(timeout_sec=3.0):
-                self.get_logger().error("음성 인식 노드(/get_keyword)가 실행되어 있지 않습니다.")
-                return
-
-            req = Trigger.Request()
-            future = self.stt_client.call_async(req)
-
-            stt_start = time.time()
-            while not future.done() and rclpy.ok():
-                if time.time() - stt_start >= 60.0:
-                    future.cancel()
-                    self.get_logger().error("음성 인식 응답 시간 초과")
-                    return
-                time.sleep(0.05)
-            response = future.result()
-
-            if response is not None and response.success:
-                data = response.message.split(',')
-                obj = data[0].strip() if len(data) > 0 else ""
-                tgt = data[1].strip() if len(data) > 1 else ""
-
-                if obj:
-                    self.get_logger().info(f"명령 수신 성공: [{obj}]를 [{tgt}]로 이동")
-
-                    saved_positions = {
-                        "vision_pos": self.VISION_POS
-                    }
-
-                    hand_pos = None
-                    if tgt.lower() == 'hand':
-                        self.get_logger().info("현재 위치에서 손 위치를 먼저 스캔합니다.")
-                        hand_pos = self._get_vision_target('hand', timeout_sec=3.0)
-                        if not hand_pos:
-                            self.get_logger().error("손 위치를 찾지 못했습니다.")
-
-                    self.get_logger().info("물체 인식을 위해 전용 위치로 이동합니다.")
-                    self.movej2(self.GO_HOME, vel=100.0, acc=80.0)
-                    mwait()
-                    self.movej2(posj(self.VISION_SCAN_1), vel=100.0, acc=80.0)
-                    self.movej2(posj(self.VISION_SCAN_2), vel=100.0, acc=80.0)
-                    mwait()
-                    self.check_pause(); wait(1.0)
-
-                    self.get_logger().info(f"인식 지점에서 [{obj}] 탐색 중...")
-                    tool_pos = self._get_vision_target(obj, timeout_sec=3.0)
-
-                    if tool_pos:
-                        self.get_logger().info(f"--- {obj} 집기 수행 ---")
-                        pick_pos = list(tool_pos)
-                        pick_pos[2] = -30
-                        self.get_logger().info(f"좌표 [{pick_pos[0]},{pick_pos[1]},{pick_pos[2]}] 탐색 중...")
-                        self.movel2(pick_pos, vel=VELOCITY, acc=ACC)
-                        mwait()
-                        self.grasp()
-                        mwait()
-
-                        pick_pos[2] = 0
-                        self.movel2(pick_pos, vel=VELOCITY, acc=ACC)
-                        mwait()
-
-                        self.movel2(saved_positions["vision_pos"], vel=100.0, acc=80.0)
-                        self.movej2(posj(self.VISION_SCAN_1), vel=100.0, acc=80.0)
-                        mwait()
-
-                        if tgt.lower() == 'hand':
-                            if hand_pos:
-                                self.movej2(self.GO_HOME, vel=100.0, acc=80.0)
-                                dest_pos = list(hand_pos)
-                                dest_pos[2] += 30.0
-                                self.movel2(dest_pos, vel=VELOCITY, acc=ACC)
-                                self.release()
-                                self.get_logger().info("손으로 전달 완료")
-                            else:
-                                self.get_logger().error("손 위치를 찾지 못해 작업을 중지합니다.")
-
-                        elif tgt in saved_positions:
-                            self.get_logger().info(f"[{tgt}] 위치로 이동하여 내려놓습니다.")
-                            self.movej2(self.GO_HOME, vel=100.0, acc=80.0)
-                            self.movel2(saved_positions[tgt], vel=VELOCITY, acc=ACC)
-                            self.release()
-
-                        self.movej2(self.GO_HOME, vel=100.0, acc=80.0)
-                        self.release()
-                    else:
-                        self.get_logger().warn(f"카메라에서 [{obj}]를 찾지 못했습니다.")
-                        self.movej2(self.GO_HOME, vel=100.0, acc=80.0)
-                else:
-                    self.get_logger().warn("명령어에서 객체를 추출하지 못했습니다.")
-            else:
-                self.get_logger().warn("음성 인식 실패 또는 아무 말도 하지 않았습니다.")
-        else:
-            self.get_logger().info("밀기 감지 안 됨. 다음 블록 작업 대기 상태로 넘어갑니다.")
-
-        self.id_pub.publish(msg)
-        self.get_logger().info(f"완료 신호 {self.block_id} 발행 완료")
 
     def brick_pick(self, block_type):
         from DSR_ROBOT2 import (
@@ -671,7 +530,10 @@ class RobotWorkerNode(Node):
 
                 self.get_logger().info(f"작업 완료: Human({block_help}) ID ({block_id}) Type({block_type}) level({block_level}) Grid({u}, {v})")
 
-                self.check_x_push_and_execute(block_id)
+                done_msg = Int32()
+                done_msg.data = block_id
+                self.id_pub.publish(done_msg)
+                self.get_logger().info(f"완료 신호 {block_id} 발행 완료")
 
             except Exception as e:
                 self.get_logger().error(f"로봇 에러 발생: {e}")

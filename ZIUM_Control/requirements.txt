@@ -3,9 +3,4 @@
 
 mediapipe          # detection.py — hand landmark detection (MediaPipe)
 ultralytics        # yolo.py — YOLO v8 object detection
-sounddevice        # stt.py — audio recording
-pyaudio            # MicController.py, get_keyword.py — microphone stream (PyAudio)
-openai             # stt.py — Whisper STT API
-langchain-openai   # get_keyword.py — ChatOpenAI (GPT-4o)
-langchain          # get_keyword.py — PromptTemplate
-python-dotenv      # get_keyword.py — .env loading
+python-dotenv      # stage_place.py — .env loading (TOOLCHARGER_IP)

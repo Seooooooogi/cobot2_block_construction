@@ -40,7 +40,6 @@ setup(
     entry_points={
         'console_scripts': [
             'stage_place = pick2build.stage_place:main',
-            'get_keyword = pick2build.get_keyword:main',
             'detection = pick2build.detection:main',
         ],
     },

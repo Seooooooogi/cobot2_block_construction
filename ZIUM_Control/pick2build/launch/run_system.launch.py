@@ -13,14 +13,6 @@ def generate_launch_description():
             emulate_tty=True               
         ),
         
-        # 2. 음성 인식(서비스) 노드 동시 실행 
-        Node(
-            package='pick2build',
-            executable='get_keyword',
-            name='get_keyword_node',
-            output='screen',
-            emulate_tty=True
-        ),
         Node(
             package='pick2build',
             executable='detection',
