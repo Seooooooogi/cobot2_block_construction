@@ -134,7 +134,7 @@ source /opt/ros/foxy/setup.bash
 source install/setup.bash
 
 conda activate my
-ros2 run cobot2 foundation_pose \
+ros2 run zium_detection foundation_pose \
     --est_refine_iter 20 \
     --track_refine_iter 20
 ```
@@ -236,19 +236,18 @@ cobot2_block_construction/
 │       ├── package.xml
 │       └── setup.py
 │
-├── ZIUM_Detection/                      # Detection PC 워크스페이스 (Docker)
-│   └── cobot2/                          # ROS2 패키지 (ament_python, ROS Foxy)
-│       ├── cobot2/
-│       │   └── FoundationPose.py        # 6-DoF 포즈 추정 노드 (YOLO + FoundationPose)
-│       ├── FoundationPose-main/
-│       │   ├── estimater.py             # FoundationPose 추정기 라이브러리
-│       │   ├── weights/
-│       │   │   └── T_gripper2camera.npy # 그리퍼↔카메라 외부 보정 행렬 (best.pt는 gitignore)
-│       │   └── demo_data/lego/
-│       │       ├── cam_K.txt            # 카메라 내부 파라미터 (fallback)
-│       │       └── mesh/                # 블록 3D 메시 파일 (0.obj, 1.obj, 2.obj)
-│       ├── package.xml
-│       └── setup.py
+├── ZIUM_Detection/                      # ROS2 패키지 `zium_detection` (ament_python, ROS Foxy, Docker)
+│   ├── zium_detection/
+│   │   └── FoundationPose.py            # 6-DoF 포즈 추정 노드 (YOLO + FoundationPose)
+│   ├── FoundationPose-main/
+│   │   ├── estimater.py                 # FoundationPose 추정기 라이브러리
+│   │   ├── weights/
+│   │   │   └── T_gripper2camera.npy     # 그리퍼↔카메라 외부 보정 행렬 (best.pt는 gitignore)
+│   │   └── demo_data/lego/
+│   │       ├── cam_K.txt                # 카메라 내부 파라미터 (fallback)
+│   │       └── mesh/                    # 블록 3D 메시 파일 (0.obj, 1.obj, 2.obj)
+│   ├── package.xml
+│   └── setup.py
 │
 ├── ZIUM_UI/                             # 관리자 대시보드
 │   └── src/

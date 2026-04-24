@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'cobot2'
+package_name = 'zium_detection'
 
 setup(
     name=package_name,
@@ -24,7 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-        'foundation_pose = cobot2.FoundationPose:main',
+        'foundation_pose = zium_detection.FoundationPose:main',
         ],
     },
 )
