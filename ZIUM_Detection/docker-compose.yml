@@ -1,13 +1,13 @@
 # Single-PC FoundationPose validation — Detection side
-# Host runs ROS 2 Humble (pick2build); this container runs ROS 2 Foxy.
-# DDS 상호 가시성: network_mode=host + RMW_IMPLEMENTATION=rmw_fastrtps_cpp (양쪽 동일)
+# 호스트·컨테이너 모두 ROS 2 Humble. DDS 상호 가시성: network_mode=host.
+# cross-distro(Foxy↔Humble) DDS 데이터 흐름 실패 이슈로 Humble 단일화 결정.
 
 services:
   detection:
     build:
       context: .
       dockerfile: Dockerfile
-    image: zium-detection:foxy-cu118
+    image: zium-detection:humble-cu118
     container_name: zium-detection
     network_mode: host
     privileged: true        # RealSense USB 접근 편의 (운영 배포 시 device 매핑으로 교체)
