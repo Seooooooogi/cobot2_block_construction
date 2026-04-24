@@ -93,13 +93,39 @@ RUN cd /opt && git clone --recursive --branch v0.15.0 --depth 1 \
  && cd kaolin && /opt/conda/bin/conda run -n my bash -c "FORCE_CUDA=1 python setup.py develop"
 
 # nvdiffrast: pin v0.3.1 (안정 릴리스, 2023-01)
+# 설치 직후 ops.py에서 TORCH_CUDA_ARCH_LIST=''로 강제 초기화하는 라인 주석 처리.
+# 이 라인이 남아있으면 호스트 GPU arch를 PyTorch가 자동감지(RTX 40xx → compute_89)
+# 하는데 CUDA 11.3 nvcc가 이를 지원하지 않아 JIT 빌드가 실패함.
 RUN cd /opt && git clone --branch v0.3.1 --depth 1 https://github.com/NVlabs/nvdiffrast \
- && cd nvdiffrast && /opt/conda/bin/conda run -n my pip install --no-cache-dir .
+ && cd nvdiffrast && /opt/conda/bin/conda run -n my pip install --no-cache-dir . \
+ && sed -i "s|os\.environ\['TORCH_CUDA_ARCH_LIST'\] = ''|# os.environ['TORCH_CUDA_ARCH_LIST'] = '' # patched: honor outer env|" \
+      /opt/conda/envs/my/lib/python3.8/site-packages/nvdiffrast/torch/ops.py \
+ && grep -n "TORCH_CUDA_ARCH_LIST" /opt/conda/envs/my/lib/python3.8/site-packages/nvdiffrast/torch/ops.py
+
+# Additional FoundationPose runtime deps (상류 requirements.txt 중 estimater / learning
+# 모듈 체인이 실제로 import 하는 항목. late layer 로 추가하여 kaolin·nvdiffrast 캐시 보존).
+RUN /opt/conda/bin/conda run -n my pip install --no-cache-dir \
+      h5py pysdf fvcore Panda3D GPUtil py-spy pybullet torchnet \
+      colorama bokeh plotly simplejson PyOpenGL-accelerate
+
+# TORCH_CUDA_ARCH_LIST="8.6+PTX":
+#   CUDA 11.3 nvcc는 compute_89(RTX 40xx, Ada Lovelace)를 모름.
+#   런타임에 nvdiffrast가 PyTorch cpp_extension으로 JIT 빌드하는데, 이 때
+#   8.6로 PTX 빌드해 두고 드라이버(현 580/CUDA 13)가 SM 8.9로 JIT 재컴파일.
+#   RTX 30xx 이하 GPU라면 이 변수 제거하거나 7.5/8.0 등으로 맞춰도 됨.
+ENV TORCH_CUDA_ARCH_LIST="8.6+PTX"
 
 # ---------- colcon workspace ----------
 WORKDIR /ros2_ws
 RUN mkdir -p /ros2_ws/src
 COPY . /ros2_ws/src/zium_detection/
+
+# Vendored FoundationPose-main은 weights·demo_data·estimater.py만 포함.
+# estimater가 의존하는 Utils.py·datareader.py·learning/·offscreen_renderer.py 등은
+# 상류 NVlabs/FoundationPose에서 overlay (cp -rn: 기존 파일은 보존).
+RUN cd /tmp && git clone --depth 1 https://github.com/NVlabs/FoundationPose.git FP-upstream \
+ && cp -rn FP-upstream/. /ros2_ws/src/zium_detection/FoundationPose-main/ \
+ && rm -rf FP-upstream
 
 RUN bash -c "source /opt/ros/foxy/setup.bash && cd /ros2_ws && colcon build --symlink-install"
 
