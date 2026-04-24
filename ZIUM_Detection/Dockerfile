@@ -86,10 +86,14 @@ RUN /opt/conda/bin/conda run -n my pip install --no-cache-dir \
       xatlas rtree videoio numba pycocotools
 
 # ---------- kaolin + nvdiffrast (CUDA extensions) ----------
-RUN cd /opt && git clone --recursive https://github.com/NVIDIAGameWorks/kaolin \
+# kaolin: pin v0.15.0 (PyTorch 1.6.0 - 2.1.1). v0.16+ 부터 PyTorch 2.3+ 요구하여
+# 상류 NVlabs Dockerfile의 `git clone` 방식이 시간이 지나며 깨짐.
+RUN cd /opt && git clone --recursive --branch v0.15.0 --depth 1 \
+      https://github.com/NVIDIAGameWorks/kaolin \
  && cd kaolin && /opt/conda/bin/conda run -n my bash -c "FORCE_CUDA=1 python setup.py develop"
 
-RUN cd /opt && git clone https://github.com/NVlabs/nvdiffrast \
+# nvdiffrast: pin v0.3.1 (안정 릴리스, 2023-01)
+RUN cd /opt && git clone --branch v0.3.1 --depth 1 https://github.com/NVlabs/nvdiffrast \
  && cd nvdiffrast && /opt/conda/bin/conda run -n my pip install --no-cache-dir .
 
 # ---------- colcon workspace ----------
