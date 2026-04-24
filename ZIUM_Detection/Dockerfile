@@ -62,6 +62,8 @@ RUN add-apt-repository universe \
 SHELL ["/bin/bash", "--login", "-c"]
 RUN wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /miniconda.sh \
  && /bin/bash /miniconda.sh -b -p /opt/conda && rm /miniconda.sh \
+ && /opt/conda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main \
+ && /opt/conda/bin/conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r \
  && /opt/conda/bin/conda create -y -n my python=3.8 \
  && /opt/conda/bin/conda clean -afy
 ENV PATH=/opt/conda/envs/my/bin:/opt/conda/bin:$PATH
