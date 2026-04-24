@@ -15,7 +15,7 @@ Project-specific:
 | 컴포넌트 | 명령 |
 |----------|------|
 | Control (pick2build) | `cd ZIUM_Control && colcon build && ros2 launch pick2build run_system.launch.py` |
-| Detection (Docker) | Detection PC에서 Docker 컨테이너 실행 후 `ros2 run cobot2 <node>` |
+| Detection (Docker) | Detection PC에서 Docker 컨테이너 실행 후 `ros2 run zium_detection <node>` |
 | UI (React) | `cd ZIUM_UI && npm install && npm run dev` |
 | ROS2 테스트 | `colcon test && colcon test-result` |
 
@@ -50,7 +50,7 @@ Doosan M0609
 ## Packages
 
 - `ZIUM_Control/pick2build` — M0609 제어, pick/place, stop-recovery, STT
-- `ZIUM_Detection/cobot2` — RealSense pub, YOLO, FoundationPose pose estimation
+- `ZIUM_Detection` — RealSense pub, YOLO, FoundationPose pose estimation (package: `zium_detection`)
 - `ZIUM_UI/src` — React 관리자 대시보드 (Floor Plan, 공정률, 일시정지/재개)
 
 ## Secrets Policy
