@@ -7,8 +7,12 @@ conda_path = '/opt/conda/envs/my/lib/python3.8/site-packages'
 if conda_path not in sys.path:
     sys.path.insert(0, conda_path)
 
-# 2. FoundationPose 프로젝트 경로 추가
-project_path = os.path.dirname(os.path.abspath(__file__))
+# 2. FoundationPose 프로젝트 경로 설정
+# estimater 모듈과 weights/demo_data 자산은 모두 FoundationPose-main/ 아래에 있음.
+# zium_detection/FoundationPose.py 기준 한 단계 위의 ZIUM_Detection/FoundationPose-main/.
+# 전제: colcon build --symlink-install (설치 시에도 __file__이 소스 트리로 해석됨).
+_module_dir = os.path.dirname(os.path.abspath(__file__))
+project_path = os.path.abspath(os.path.join(_module_dir, '..', 'FoundationPose-main'))
 if project_path not in sys.path:
     sys.path.append(project_path)
 
