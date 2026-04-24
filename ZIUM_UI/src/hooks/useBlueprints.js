@@ -16,7 +16,6 @@ import {
   getDocs,
   query,
   where,
-  orderBy,
   serverTimestamp,
 } from 'firebase/firestore';
 import { firestore } from '../firebase';
@@ -60,10 +59,12 @@ export function useBlueprints(user) {
       const q = query(
         collection(firestore, 'blueprints'),
         where('ownerUid', '==', user.uid),
-        orderBy('savedAt', 'desc'),
       );
       const snap = await getDocs(q);
-      setSavedList(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // savedAt 기준 내림차순 정렬 (클라이언트)
+      list.sort((a, b) => (b.savedAt?.seconds ?? 0) - (a.savedAt?.seconds ?? 0));
+      setSavedList(list);
     } catch (e) {
       console.error('설계도 목록 조회 실패:', e);
     } finally {
