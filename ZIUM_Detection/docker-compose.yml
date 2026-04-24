@@ -1,0 +1,38 @@
+# Single-PC FoundationPose validation — Detection side
+# Host runs ROS 2 Humble (pick2build); this container runs ROS 2 Foxy.
+# DDS 상호 가시성: network_mode=host + RMW_IMPLEMENTATION=rmw_fastrtps_cpp (양쪽 동일)
+
+services:
+  detection:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: zium-detection:foxy-cu118
+    container_name: zium-detection
+    network_mode: host
+    privileged: true        # RealSense USB 접근 편의 (운영 배포 시 device 매핑으로 교체)
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - XAUTHORITY=/tmp/.docker.xauth
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${XAUTHORITY:-/tmp/.docker.xauth}:/tmp/.docker.xauth:rw
+      # 소스 라이브 마운트 (재빌드 없이 코드 수정 반영)
+      - ./zium_detection:/ros2_ws/src/zium_detection/zium_detection:rw
+      - ./launch:/ros2_ws/src/zium_detection/launch:ro
+      # 가중치 파일(.pt 등)은 gitignored — 호스트에서 제공
+      - ./FoundationPose-main/weights:/ros2_ws/src/zium_detection/FoundationPose-main/weights:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    stdin_open: true
+    tty: true

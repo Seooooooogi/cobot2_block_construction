@@ -1,0 +1,28 @@
+# colcon build artifacts (regenerated inside container)
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# git
+.git/
+.gitignore
+
+# editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# local-only assets (weights are mounted via compose)
+FoundationPose-main/weights/*.pt
+FoundationPose-main/weights/*.pth
+FoundationPose-main/.git/
+
+# tests
+test/__pycache__/

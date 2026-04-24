@@ -27,9 +27,6 @@ npm-debug.log*
 .vscode/
 .idea/
 
-# Docker
-.dockerignore
-
 # Outputs & logs
 outputs/
 *.jsonl
