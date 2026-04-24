@@ -50,3 +50,9 @@ BRIEF.md
 
 # Docs (maintained separately)
 docs/
+
+# Firebase Data Connect (local scaffolding, not part of repo)
+/dataconnect/
+/dataconnect-generated/
+/package.json
+/package-lock.json
