@@ -323,31 +323,45 @@ const BlueprintEditor = () => {
     return map[typeId] || "1";
   };
 
-  // 제어 시그널(Stop/Start/Unlock) ROS 발행 함수
-  const publishSignal = (topicName) => {
+  // 제어 명령(Stop/Start/Unlock) ROS Service 호출 함수
+  const callSignalService = (serviceName) => {
     if (!rosRef.current || !rosRef.current.isConnected) {
       alert("⚠️ 로봇(ROS)에 연결되어 있지 않습니다!");
       return;
     }
 
-    const signalTopic = new ROSLIB.Topic({
+    const signalService = new ROSLIB.Service({
       ros: rosRef.current,
-      name: topicName,
-      messageType: 'std_msgs/msg/Int32'
+      name: serviceName,
+      serviceType: 'std_srvs/srv/Trigger'
     });
 
-    signalTopic.publish({ data: 1 });
-    console.log(`[제어 신호 전송] 토픽: ${topicName}, 데이터: 1`);
+    const request = new ROSLIB.ServiceRequest({});
+    signalService.callService(
+      request,
+      (result) => {
+        console.log(`[제어 명령 응답] 서비스: ${serviceName}, success: ${result.success}, message: ${result.message}`);
 
-    // 토픽에 따른 작업 상태 변경 로직
-    if (topicName === '/signal_stop') {
-      setRobotWorkingStatus('일시 정지 ⏸️');
-    } else if (topicName === '/signal_start') {
-      setRobotWorkingStatus('재개 🔄');
-      setTimeout(() => {
-        setRobotWorkingStatus('진행 중 🏗️');
-      }, 1500); // 1.5초 후 진행 중으로 자연스럽게 변경
-    }
+        if (!result.success) {
+          alert(`⚠️ 제어 명령 실패: ${result.message}`);
+          return;
+        }
+
+        // 응답 수신 후 UI 상태 업데이트 (명령이 실제로 전달된 시점)
+        if (serviceName === '/signal_stop') {
+          setRobotWorkingStatus('일시 정지 ⏸️');
+        } else if (serviceName === '/signal_start') {
+          setRobotWorkingStatus('재개 🔄');
+          setTimeout(() => {
+            setRobotWorkingStatus('진행 중 🏗️');
+          }, 1500);
+        }
+      },
+      (error) => {
+        console.error(`[제어 명령 에러] 서비스: ${serviceName}, error: ${error}`);
+        alert(`⚠️ 제어 명령 호출 실패: ${error}`);
+      }
+    );
   };
 
   // ROS로 좌표 데이터 퍼블리시
@@ -655,18 +669,18 @@ const saveBlueprintToFile = () => {
           
           {/* --- 버튼 제어 섹션 (비율 1:2) --- */}
           <div className="control-actions">
-            <button className="signal-btn btn-unlock standard" onClick={() => publishSignal('/signal_unlock')}>
+            <button className="signal-btn btn-unlock standard" onClick={() => callSignalService('/signal_unlock')}>
               Unlock 🔓
             </button>
 
             {/* ✅ 물리 스위치 형태의 토글 섹션 */}
-            <div 
+            <div
               className={`toggle-switch-container ${robotWorkingStatus.includes('일시 정지') ? 'state-start' : 'state-stop'}`}
               onClick={() => {
                 if (robotWorkingStatus.includes('일시 정지')) {
-                  publishSignal('/signal_start');
+                  callSignalService('/signal_start');
                 } else {
-                  publishSignal('/signal_stop');
+                  callSignalService('/signal_stop');
                 }
               }}
             >
