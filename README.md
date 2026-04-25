@@ -122,6 +122,33 @@ heavy nvcc 컴파일 단계에 swap thrashing/freeze 위험이 있어 빌드 스
 `--memory=20g --memory-swap=20g`, `--progress=plain`, `tee build.log` 옵션을 항상 적용한다.
 (컴파일 잡 수 제한 `MAX_JOBS=4`는 Dockerfile ENV에 포함되어 빌드 경로와 무관하게 항상 적용됨.)
 
+### Detection 가중치 준비 (최초 1회)
+
+#### NVlabs FoundationPose 가중치 — 자동 다운로드
+
+```bash
+./scripts/download_foundationpose_weights.sh
+```
+
+스크립트가 수행하는 작업:
+- `gdown` 미설치 시 `pip install --user gdown` 자동 실행
+- NVlabs Drive 폴더 다운로드 → `ZIUM_Detection/FoundationPose-main/weights/` 직속 배치
+- Refiner (`2023-10-28-18-33-37/`, ~68M) + Scorer (`2024-01-11-20-02-45/`, ~190M)
+- 멱등성 — 이미 존재하면 skip
+
+#### 사용자 제공 자산 (별도 배치 필요)
+
+자동 다운로드 불가 — 학습 결과·캘리브레이션 데이터는 직접 배치한다.
+
+| 경로 | 설명 |
+|------|------|
+| `ZIUM_Detection/FoundationPose-main/weights/best.pt` | 커스텀 YOLO 학습 결과 (YOLOv11) |
+| `ZIUM_Detection/FoundationPose-main/weights/T_gripper2camera.npy` | 그리퍼↔카메라 외부 보정 행렬 |
+| `ZIUM_Detection/FoundationPose-main/demo_data/lego/mesh/*.obj` | 블록 3D 메시 파일 |
+
+컨테이너 시작 시 `ros_entrypoint.sh`가 위 가중치 누락을 검사해 경고 메시지를 `docker logs`
+첫 줄에 출력한다.
+
 ### UI
 
 ```bash
@@ -246,17 +273,27 @@ cobot2_block_construction/
 │       └── setup.py
 │
 ├── ZIUM_Detection/                      # ROS2 패키지 `zium_detection` (Humble + CUDA 11.8 Docker)
+│   ├── Dockerfile                       # 컨테이너 이미지 정의 (FP + YOLO + ROS Humble)
+│   ├── docker-compose.yml               # 컨테이너 실행 설정 (network=host, GPU, 볼륨 마운트)
+│   ├── docker/
+│   │   └── ros_entrypoint.sh            # ROS env source + weights pre-flight 체크
+│   ├── launch/
+│   │   └── detection.launch.py          # foundation_pose_node 실행
 │   ├── zium_detection/
-│   │   └── FoundationPose.py            # 6-DoF 포즈 추정 노드 (YOLO + FoundationPose)
-│   ├── FoundationPose-main/
-│   │   ├── estimater.py                 # FoundationPose 추정기 라이브러리
-│   │   ├── weights/
-│   │   │   └── T_gripper2camera.npy     # 그리퍼↔카메라 외부 보정 행렬 (best.pt는 gitignore)
-│   │   └── demo_data/lego/
-│   │       ├── cam_K.txt                # 카메라 내부 파라미터 (fallback)
-│   │       └── mesh/                    # 블록 3D 메시 파일 (0.obj, 1.obj, 2.obj)
+│   │   └── FoundationPose.py            # 6-DoF 포즈 추정 노드 (YOLO + FoundationPose 통합)
+│   ├── FoundationPose-main/             # NVlabs upstream (.gitignore — Docker 빌드 시 자동 clone)
+│   │   ├── weights/                     # 가중치 디렉토리 (사용자가 준비)
+│   │   │   ├── 2023-10-28-18-33-37/     # FP Refiner — scripts/download_foundationpose_weights.sh
+│   │   │   ├── 2024-01-11-20-02-45/     # FP Scorer — 동일 스크립트로 자동 다운로드
+│   │   │   ├── best.pt                  # YOLO 커스텀 학습 결과 (사용자 제공)
+│   │   │   └── T_gripper2camera.npy     # 그리퍼↔카메라 외부 보정 (사용자 제공)
+│   │   └── demo_data/lego/mesh/         # LEGO 3D 메시 (사용자 제공)
 │   ├── package.xml
 │   └── setup.py
+│
+├── scripts/
+│   ├── build_detection_docker.sh        # Detection 이미지 빌드 (mitigation 옵션 포함)
+│   └── download_foundationpose_weights.sh  # NVlabs Refiner+Scorer 자동 다운로드
 │
 ├── ZIUM_UI/                             # 관리자 대시보드
 │   └── src/
