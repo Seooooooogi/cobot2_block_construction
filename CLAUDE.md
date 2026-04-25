@@ -25,14 +25,16 @@ Project-specific:
 Admin UI (React)
     │ WebSocket (rosbridge)
     ▼
-Control PC (pick2build ROS2)          Detection PC (Docker: ROS Foxy)
-├── Queue (block task list)     ◄──── /dsr01/target_lego_pose
-├── brick_pick()                ────► /dsr01/detection_start
-├── brick_place()                     realsense_pub → object_detection
-└── check_x_push_and_execute()        (YOLO + FoundationPose)
-    │
-    ▼
-Doosan M0609
+Single PC (Ubuntu 22.04 + ROS2 Humble)
+┌─ Host: pick2build (Control)        Container: zium-detection:humble-cu118
+│  ├── Queue (block task list)  ◄──── /dsr01/target_lego_pose
+│  ├── brick_pick()             ────► /dsr01/detection_start
+│  ├── brick_place()                  foundation_pose_node
+│  └── check_x_push_and_execute()     (YOLO + FoundationPose)
+│
+└─ Host: realsense2_camera_node ────► /camera/color/image_raw, aligned_depth_to_color/...
+
+pick2build ──► Doosan M0609 (TCP/IP) + RG2 그리퍼 (Modbus TCP)
 ```
 
 ## ROS Topics
