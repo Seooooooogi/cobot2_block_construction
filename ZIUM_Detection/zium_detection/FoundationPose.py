@@ -2,13 +2,15 @@
 import os
 import sys
 
-# 1. 가상환경(my) 경로 최우선 설정
-conda_path = '/opt/conda/envs/my/lib/python3.8/site-packages'
-if conda_path not in sys.path:
-    sys.path.insert(0, conda_path)
-
-# 2. FoundationPose 프로젝트 경로 추가
-project_path = os.path.dirname(os.path.abspath(__file__))
+# FoundationPose 프로젝트 경로 설정
+# estimater 모듈과 weights/demo_data 자산은 모두 FoundationPose-main/ 아래에 있음.
+# 정적 install(--symlink-install 미사용)에서는 __file__이 install 트리를 가리키므로
+# 상대경로(__file__/../FoundationPose-main)는 닿지 않음. 컨테이너 src 절대경로 우선 사용,
+# 호스트 dev 실행을 위해 상대경로 fallback 유지.
+_module_dir = os.path.dirname(os.path.abspath(__file__))
+project_path = '/ros2_ws/src/zium_detection/FoundationPose-main'
+if not os.path.isdir(project_path):
+    project_path = os.path.abspath(os.path.join(_module_dir, '..', 'FoundationPose-main'))
 if project_path not in sys.path:
     sys.path.append(project_path)
 
@@ -402,7 +404,9 @@ def main(args=None):
     parser.add_argument('--est_refine_iter', type=int, default=20) 
     parser.add_argument('--track_refine_iter', type=int, default=20)
     parser.add_argument('--yolo_model', type=str, default=os.path.join(project_path, 'weights/best.pt'))
-    args = parser.parse_args()
+    # ROS2 launch가 추가하는 `--ros-args -r __node:=... -r __ns:=...`를 argparse가 거부하지
+    # 않도록 parse_known_args 사용. ROS 인자는 rclpy.init이 이미 sys.argv에서 처리함.
+    args, _ = parser.parse_known_args()
 
     manager = FoundationPoseManager(args)
     try:

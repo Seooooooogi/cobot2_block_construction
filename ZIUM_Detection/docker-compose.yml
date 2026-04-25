@@ -1,0 +1,39 @@
+# Single-PC FoundationPose validation — Detection side
+# 호스트·컨테이너 모두 ROS 2 Humble. DDS 상호 가시성: network_mode=host.
+# cross-distro(Foxy↔Humble) DDS 데이터 흐름 실패 이슈로 Humble 단일화 결정.
+
+services:
+  detection:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: zium-detection:humble-cu118
+    container_name: zium-detection
+    network_mode: host
+    # privileged 제거: 컨테이너는 RealSense USB 직접 안 잡음 (host에서 realsense2_camera 노드가 캡처).
+    # FoundationPose는 image topic을 ROS로만 구독.
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - XAUTHORITY=/tmp/.docker.xauth
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${XAUTHORITY:-/tmp/.docker.xauth}:/tmp/.docker.xauth:rw
+      # 소스 라이브 마운트 (재빌드 없이 코드 수정 반영)
+      - ./zium_detection:/ros2_ws/src/zium_detection/zium_detection:rw
+      - ./launch:/ros2_ws/src/zium_detection/launch:ro
+      # 가중치 파일(.pt 등)은 gitignored — 호스트에서 제공
+      - ./FoundationPose-main/weights:/ros2_ws/src/zium_detection/FoundationPose-main/weights:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    stdin_open: true
+    tty: true

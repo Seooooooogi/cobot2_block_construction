@@ -1,0 +1,47 @@
+# colcon build artifacts (regenerated inside container)
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# git
+.git/
+.gitignore
+
+# editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# local-only assets (weights are mounted via compose)
+FoundationPose-main/weights/*.pt
+FoundationPose-main/weights/*.pth
+FoundationPose-main/.git/
+
+# FoundationPose upstream overlay — Dockerfile L110이 컨테이너 안에서 git clone으로 가져옴.
+# host에 받아둔 사본을 빌드 컨텍스트에 넣지 않음 (수 GB 절감).
+FoundationPose-main/assets/
+FoundationPose-main/learning/
+FoundationPose-main/bundlesdf/
+FoundationPose-main/docker/
+FoundationPose-main/mycpp/
+FoundationPose-main/datareader.py
+FoundationPose-main/Utils.py
+FoundationPose-main/offscreen_renderer.py
+FoundationPose-main/run_demo.py
+FoundationPose-main/run_linemod.py
+FoundationPose-main/run_ycb_video.py
+FoundationPose-main/build_all.sh
+FoundationPose-main/build_all_conda.sh
+FoundationPose-main/readme.md
+FoundationPose-main/requirements.txt
+FoundationPose-main/LICENSE
+
+# tests
+test/__pycache__/
