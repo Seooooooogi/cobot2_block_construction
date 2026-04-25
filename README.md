@@ -225,13 +225,20 @@ npm run dev
 
 ### Admin UI ↔ `pick2build` (rosbridge WebSocket)
 
+**Topic** (단방향 stream):
+
 | 토픽 | 타입 | 방향 | 설명 |
 |------|------|------|------|
-| `/block/info` | `std_msgs/String` (JSON) | UI → pick2build | 블록 배치 도면 정보 |
-| `/signal_id` | `std_msgs/Int32` | UI → pick2build | 작업 시작 신호 |
-| `/signal_stop` | `std_msgs/Int32` | UI → pick2build | 일시정지 |
-| `/signal_start` | `std_msgs/Int32` | UI → pick2build | 재개 |
-| `/signal_unlock` | `std_msgs/Int32` | UI → pick2build | 강제 재개 (E-Stop 해제) |
+| `/block/info` | `std_msgs/String` (JSON) | UI → pick2build | 블록 배치 도면 정보 (일괄 전송) |
+| `/signal_id` | `std_msgs/Int32` | pick2build → UI | 블록 배치 완료 ID 진행률 stream |
+
+**Service** (요청/응답, `std_srvs/Trigger`):
+
+| 서비스 | 방향 | 응답 메시지 | 설명 |
+|--------|------|-------------|------|
+| `/signal_stop` | UI → pick2build | `paused` | 일시정지 (state.is_paused=True) |
+| `/signal_start` | UI → pick2build | `resumed` | 재개 (state.is_paused=False) |
+| `/signal_unlock` | UI → pick2build | `unlocked` | 강제 재개 / E-Stop 해제 (state.needs_unlock=True) |
 
 ### pick2build 내부 서비스
 
