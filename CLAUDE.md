@@ -37,21 +37,28 @@ Single PC (Ubuntu 22.04 + ROS2 Humble)
 pick2build ──► Doosan M0609 (TCP/IP) + RG2 그리퍼 (Modbus TCP)
 ```
 
-## ROS Topics
+## ROS 인터페이스
 
-| Topic | 방향 | 설명 |
-|-------|------|------|
-| `/block/info` | UI → Control | 블록 배치 설계 정보 |
-| `/signal_id` | UI → Control | 작업 시작 신호 |
-| `/signal_stop` | UI → Control | 일시정지 |
-| `/signal_start` | UI → Control | 재개 |
-| `/signal_unlock` | UI → Control | 강제재개 |
-| `/dsr01/detection_start` | Control → Detection | 감지 시작 트리거 |
-| `/dsr01/target_lego_pose` | Detection → Control | 블록 6-DoF 포즈 |
+**Topic**:
+
+| Topic | 타입 | 방향 | 설명 |
+|-------|------|------|------|
+| `/block/info` | `std_msgs/String` (JSON) | UI → pick2build | 블록 배치 설계 정보 |
+| `/signal_id` | `std_msgs/Int32` | pick2build → UI | 블록 배치 완료 ID 진행률 stream |
+| `/dsr01/detection_start` | `std_msgs/Int32` | pick2build → zium_detection | 감지 시작 트리거 |
+| `/dsr01/target_lego_pose` | `std_msgs/Float64MultiArray` | zium_detection → pick2build | 블록 6-DoF 포즈 |
+
+**Service** (`std_srvs/Trigger`, UI → pick2build, rosbridge):
+
+| Service | 응답 | 설명 |
+|---------|------|------|
+| `/signal_stop` | `paused` | 일시정지 |
+| `/signal_start` | `resumed` | 재개 |
+| `/signal_unlock` | `unlocked` | 강제재개 / E-Stop 해제 |
 
 ## Packages
 
-- `ZIUM_Control/pick2build` — M0609 제어, pick/place, stop-recovery, STT
+- `ZIUM_Control/pick2build` — M0609 제어, pick/place, stop-recovery
 - `ZIUM_Detection` — RealSense pub, YOLO, FoundationPose pose estimation (package: `zium_detection`)
 - `ZIUM_UI/src` — React 관리자 대시보드 (Floor Plan, 공정률, 일시정지/재개)
 
