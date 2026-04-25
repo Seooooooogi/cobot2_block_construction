@@ -147,6 +147,14 @@ RUN cd /tmp && git clone --depth 1 https://github.com/NVlabs/FoundationPose.git 
  && cp -rn FP-upstream/. /ros2_ws/src/zium_detection/FoundationPose-main/ \
  && rm -rf FP-upstream
 
+# mycpp: FoundationPose의 native pybind11 extension (rotation grid clustering 등).
+# 빌드 안 하면 estimater.py에서 `mycpp = None` → make_rotation_grid()가 AttributeError.
+# build_all.sh의 mycpp 빌드 부분만 따옴 (kaolin은 위에서 설치, mycuda는 model-free 전용이라 skip).
+RUN cd /ros2_ws/src/zium_detection/FoundationPose-main/mycpp \
+ && mkdir -p build && cd build \
+ && cmake .. -DPYTHON_EXECUTABLE=$(which python3) \
+ && make -j4
+
 # --symlink-install 제거: setuptools≥80에서 `setup.py develop --editable` 옵션이 deprecated/제거되어
 # colcon build가 zium_detection 빌드 시 거부됨. 컨테이너 내부는 정적 install로 충분.
 RUN bash -c "source /opt/ros/humble/setup.bash && cd /ros2_ws && colcon build --parallel-workers 2"
