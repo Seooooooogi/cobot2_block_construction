@@ -1,7 +1,8 @@
 import json
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String, Float64MultiArray, Int32
+from std_msgs.msg import String, Float64MultiArray
+from std_srvs.srv import Trigger
 
 from pick2build.shared_state import RobotSharedState
 
@@ -12,9 +13,9 @@ class TopicListenerNode(Node):
         self.state = state
         self.subscription = self.create_subscription(String, '/block/info', self.listener_callback, 10)
         self.pose_sub = self.create_subscription(Float64MultiArray, '/dsr01/target_lego_pose', self.pose_callback, 10)
-        self.create_subscription(Int32, '/signal_stop', self.stop_callback, 10)
-        self.create_subscription(Int32, '/signal_start', self.start_callback, 10)
-        self.create_subscription(Int32, '/signal_unlock', self.unlock_callback, 10)
+        self.create_service(Trigger, '/signal_stop', self.stop_service)
+        self.create_service(Trigger, '/signal_start', self.start_service)
+        self.create_service(Trigger, '/signal_unlock', self.unlock_service)
         self.get_logger().info(">>> [통신 노드] 가동 완료. 대기 중...")
 
     def listener_callback(self, msg):
@@ -41,15 +42,23 @@ class TopicListenerNode(Node):
         except Exception as e:
             self.get_logger().error(f"좌표 수신 에러: {e}")
 
-    def stop_callback(self, msg):
-        self.get_logger().warn("[Pause] 일시 정지 수신")
+    def stop_service(self, request, response):
+        self.get_logger().warn("[Pause] 일시 정지 요청 수신")
         self.state.is_paused = True
+        response.success = True
+        response.message = "paused"
+        return response
 
-    def start_callback(self, msg):
-        self.get_logger().info("[Resume] 작업 재개 수신")
+    def start_service(self, request, response):
+        self.get_logger().info("[Resume] 작업 재개 요청 수신")
         self.state.is_paused = False
+        response.success = True
+        response.message = "resumed"
+        return response
 
-    def unlock_callback(self, msg):
-        if msg.data == 1:
-            self.get_logger().info("[Unlock] 해제 신호 확인")
-            self.state.needs_unlock = True
+    def unlock_service(self, request, response):
+        self.get_logger().info("[Unlock] 해제 요청 수신")
+        self.state.needs_unlock = True
+        response.success = True
+        response.message = "unlocked"
+        return response
