@@ -48,6 +48,9 @@ BRIEF.md
 # Docs (maintained separately)
 docs/
 
+# FoundationPose upstream (cloned external code, fetched inside Dockerfile)
+ZIUM_Detection/FoundationPose-main/
+
 # Firebase Data Connect (local scaffolding, not part of repo)
 /dataconnect/
 /dataconnect-generated/

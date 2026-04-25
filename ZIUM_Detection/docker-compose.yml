@@ -10,7 +10,8 @@ services:
     image: zium-detection:humble-cu118
     container_name: zium-detection
     network_mode: host
-    privileged: true        # RealSense USB 접근 편의 (운영 배포 시 device 매핑으로 교체)
+    # privileged 제거: 컨테이너는 RealSense USB 직접 안 잡음 (host에서 realsense2_camera 노드가 캡처).
+    # FoundationPose는 image topic을 ROS로만 구독.
     environment:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
       - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
