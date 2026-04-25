@@ -6,7 +6,7 @@ AI(CV) 기반 협동 로봇(Doosan M0609)이 RealSense로 블록을 인식하고
 Global rules → see [.claude/rules/ai-constitution.md](~/.claude/rules/ai-constitution.md)
 
 Project-specific:
-1. **no motion without pose**: Detection PC로부터 블록 포즈(`/dsr01/target_lego_pose`)를 수신하기 전 pick 동작 명령 금지
+1. **no motion without pose**: Detection 컨테이너(`zium_detection`)로부터 블록 포즈(`/dsr01/target_lego_pose`)를 수신하기 전 pick 동작 명령 금지
 2. **no move during e-stop**: `/signal_stop` 수신 후 emergency stop 상태에서 어떤 모션 명령도 전송 금지. `/signal_unlock` 수신 후에만 재개 가능
 3. **no pose interpolation**: FoundationPose 결과 누락 시 보간/추측 금지 — 해당 에피소드 skip 처리
 
@@ -15,7 +15,7 @@ Project-specific:
 | 컴포넌트 | 명령 |
 |----------|------|
 | Control (pick2build) | `cd ZIUM_Control && colcon build && ros2 launch pick2build run_system.launch.py` |
-| Detection (Docker) | Detection PC에서 Docker 컨테이너 실행 후 `ros2 run zium_detection <node>` |
+| Detection (Docker) | `docker compose -f ZIUM_Detection/docker-compose.yml up -d` (호스트에서 실행) |
 | UI (React) | `cd ZIUM_UI && npm install && npm run dev` |
 | ROS2 테스트 | `colcon test && colcon test-result` |
 
