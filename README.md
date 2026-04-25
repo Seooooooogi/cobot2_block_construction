@@ -40,13 +40,15 @@ pip3 install pymodbus==3.3.2
 pip3 install -r ZIUM_Control/requirements.txt
 ```
 
-### Detection PC
+### Detection (단일 PC 통합)
 
-- Ubuntu 20.04
-- Docker (NVIDIA Container Toolkit 포함)
-- CUDA 11.x 이상
-- ROS Foxy (Docker 컨테이너 내부)
-- Intel RealSense SDK 2.0
+Control PC 한 대에서 호스트 ROS2 Humble + Docker 컨테이너로 운영한다.
+
+- Ubuntu 22.04
+- ROS2 Humble (호스트)
+- Docker + NVIDIA Container Toolkit
+- NVIDIA Driver 580+, CUDA 11.8 (컨테이너 내부)
+- Intel RealSense SDK 2.0 (호스트 `realsense2_camera` 노드가 캡처)
 
 ---
 
@@ -104,15 +106,16 @@ colcon build
 source install/setup.bash
 ```
 
-### Detection PC (Docker 내부)
+### Detection (Docker 이미지 빌드)
 
 ```bash
-# Docker 컨테이너 진입 후
-cd /path/to/ZIUM_Detection
-source /opt/ros/foxy/setup.bash
-colcon build
-source install/setup.bash
+cd ~/cobot2_block_construction
+./scripts/build_detection_docker.sh    # mitigation 옵션 포함 (--memory=20g, MAX_JOBS=4)
+# 또는: docker compose -f ZIUM_Detection/docker-compose.yml build
 ```
+
+이미지 태그: `zium-detection:humble-cu118` (ROS2 Humble + CUDA 11.8 + FoundationPose + YOLO).
+컨테이너 내부 colcon 빌드는 Dockerfile 빌드 단계에서 자동 수행된다.
 
 ### UI
 
@@ -126,20 +129,26 @@ npm run dev
 
 ## 실행
 
-### 1. Detection PC — FoundationPose 노드 시작
+### 1. RealSense 노드 (호스트)
+
+컨테이너는 USB를 직접 잡지 않는다. 카메라 토픽은 호스트에서 발행한다.
 
 ```bash
-# Docker 컨테이너 내부
-source /opt/ros/foxy/setup.bash
-source install/setup.bash
-
-conda activate my
-ros2 run zium_detection foundation_pose \
-    --est_refine_iter 20 \
-    --track_refine_iter 20
+source /opt/ros/humble/setup.bash
+ros2 run realsense2_camera realsense2_camera_node \
+    --ros-args -p align_depth.enable:=true
 ```
 
-### 2. Control PC — 시스템 런치
+### 2. Detection 컨테이너 시작
+
+```bash
+docker compose -f ~/cobot2_block_construction/ZIUM_Detection/docker-compose.yml up -d
+docker logs -f zium-detection      # foundation_pose 노드가 image topic 수신 대기 진입했는지 확인
+```
+
+`docker-compose.yml`이 `ros2 launch zium_detection detection.launch.py`를 자동 실행한다.
+
+### 3. Control PC — 시스템 런치
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -154,9 +163,8 @@ ros2 launch pick2build run_system.launch.py
 |------|------|
 | `stage_place` | TopicListenerNode (토픽 수신) + RobotWorkerNode (pick/place/push), RobotSharedState 공유 |
 | `detection` | ObjectDetectionNode — `/get_3d_position` 서비스 |
-| `get_keyword` | GetKeyword — `/get_keyword` 서비스 (STT + LLM) |
 
-### 3. UI 시작
+### 4. UI 시작
 
 ```bash
 cd ~/cobot2_block_construction/ZIUM_UI
@@ -193,7 +201,6 @@ npm run dev
 | 서비스 | 타입 | 제공 노드 | 설명 |
 |--------|------|-----------|------|
 | `/get_3d_position` | `od_msg/SrvDepthPosition` | `detection` | Control PC 카메라 기반 3D 좌표 반환 |
-| `/get_keyword` | `std_srvs/Trigger` | `get_keyword` | 음성 명령 → 키워드 추출 |
 
 ### Detection PC 카메라 토픽 (RealSense, DDS 브로드캐스트)
 
@@ -217,26 +224,23 @@ cobot2_block_construction/
 │   │       └── SrvDepthPosition.srv     # string target / float64[] depth_position
 │   └── pick2build/                      # ROS2 패키지 (ament_python)
 │       ├── launch/
-│       │   └── run_system.launch.py     # stage_place + detection + get_keyword 실행
+│       │   └── run_system.launch.py     # stage_place + detection 실행
 │       ├── pick2build/
 │       │   ├── stage_place.py           # 메인 오케스트레이터 (RobotWorkerNode: pick/place/push)
 │       │   ├── topic_listener.py        # TopicListenerNode — /block/info, 제어 신호 수신
 │       │   ├── shared_state.py          # RobotSharedState — 노드 간 공유 상태 (Queue, pause 플래그)
 │       │   ├── config/
 │       │   │   └── robot_params.yaml    # 로봇 좌표·force threshold·블록 파라미터 (캘리브레이션 설정)
-│       │   ├── detection.py             # 물체·손 감지 노드 (YOLO + MediaPipe)
-│       │   ├── get_keyword.py           # 음성 명령 추출 노드 (Whisper STT + GPT-4o)
+│       │   ├── detection.py             # ObjectDetectionNode — /get_3d_position 서비스 제공
 │       │   ├── realsense.py             # 카메라 토픽 구독 헬퍼 (ImgNode)
 │       │   ├── yolo.py                  # YOLO 모델 래퍼 (YoloModel)
-│       │   ├── stt.py                   # OpenAI Whisper STT 헬퍼
-│       │   ├── MicController.py         # PyAudio 마이크 스트림 관리
 │       │   └── onrobot.py               # RG2 그리퍼 Modbus TCP 제어
 │       ├── resource/
-│       │   └── .env                     # OPENAI_API_KEY, TOOLCHARGER_IP, TOOLCHARGER_PORT
+│       │   └── .env                     # TOOLCHARGER_IP, TOOLCHARGER_PORT
 │       ├── package.xml
 │       └── setup.py
 │
-├── ZIUM_Detection/                      # ROS2 패키지 `zium_detection` (ament_python, ROS Foxy, Docker)
+├── ZIUM_Detection/                      # ROS2 패키지 `zium_detection` (Humble + CUDA 11.8 Docker)
 │   ├── zium_detection/
 │   │   └── FoundationPose.py            # 6-DoF 포즈 추정 노드 (YOLO + FoundationPose)
 │   ├── FoundationPose-main/
