@@ -110,12 +110,17 @@ source install/setup.bash
 
 ```bash
 cd ~/cobot2_block_construction
-./scripts/build_detection_docker.sh    # mitigation 옵션 포함 (--memory=20g, MAX_JOBS=4)
-# 또는: docker compose -f ZIUM_Detection/docker-compose.yml build
+./scripts/build_detection_docker.sh              # 캐시 사용
+./scripts/build_detection_docker.sh --no-cache   # 클린 빌드
 ```
 
 이미지 태그: `zium-detection:humble-cu118` (ROS2 Humble + CUDA 11.8 + FoundationPose + YOLO).
 컨테이너 내부 colcon 빌드는 Dockerfile 빌드 단계에서 자동 수행된다.
+
+`docker compose build` 직접 호출은 권장하지 않는다 — 노트북(Katana 17, RTX 4060) 환경에서
+heavy nvcc 컴파일 단계에 swap thrashing/freeze 위험이 있어 빌드 스크립트는
+`--memory=20g --memory-swap=20g`, `--progress=plain`, `tee build.log` 옵션을 항상 적용한다.
+(컴파일 잡 수 제한 `MAX_JOBS=4`는 Dockerfile ENV에 포함되어 빌드 경로와 무관하게 항상 적용됨.)
 
 ### UI
 
