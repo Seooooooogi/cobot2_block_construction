@@ -62,9 +62,6 @@ class FoundationPoseManager(Node):
         
         self.mesh_dir = os.path.join(project_path, 'demo_data/lego/mesh')
         self.mesh_files = ["0.obj", "1.obj", "2.obj"]
-        
-        # [삭제] 하드웨어 파이프라인 관련 코드 삭제 (CPU 자원 절약)
-        # self.pipeline = rs.pipeline() ... 
 
         self.scorer = ScorePredictor()
         self.refiner = PoseRefinePredictor()
@@ -313,7 +310,7 @@ class FoundationPoseManager(Node):
                                             self.active_model = target_mesh_name
                                             self.tracking_started = True
                                     except Exception as e:
-                                        print(f"Registration Error: {e}")
+                                        print(f"Registration Error: {e}", flush=True)
                                         torch.cuda.empty_cache()
 
                 # 2. 실시간 추적 및 데이터 발행 로직
@@ -322,7 +319,7 @@ class FoundationPoseManager(Node):
                         # 아직 목표 데이터를 발행하지 않은 경우에만 추적 및 데이터 수집
                         if not self.published:
                             pose = self.estimators[self.active_model].track_one(
-                                rgb=color_img, depth=depth_img, K=self.K, 
+                                rgb=color_img, depth=depth_img, K=self.K,
                                 iteration=self.args.track_refine_iter
                             )
                             if pose is not None:
@@ -341,7 +338,7 @@ class FoundationPoseManager(Node):
                                         pose_name, pose_code = self.classify_lego_pose(rot_mat)
                                         # XYZ(3) + RPY(3) + PoseCode(1) = 총 7개 데이터 저장
                                         self.pose_buffer.append([
-                                            coords[0], coords[1], coords[2], 
+                                            coords[0], coords[1], coords[2],
                                             angles[0], angles[1], angles[2], pose_code
                                         ])
 
