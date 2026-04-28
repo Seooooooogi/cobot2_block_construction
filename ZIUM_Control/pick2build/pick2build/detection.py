@@ -10,7 +10,6 @@ from mediapipe.tasks.python import vision
 
 from od_msg.srv import SrvDepthPosition
 from pick2build.realsense import ImgNode
-from pick2build.yolo import YoloModel
 from ament_index_python.packages import get_package_share_directory
 
 class ObjectDetectionNode(Node):
@@ -18,7 +17,7 @@ class ObjectDetectionNode(Node):
         super().__init__('object_detection_node')
         
         self.img_node = ImgNode()
-        self.yolo_model = YoloModel()
+        self.yolo_model = None  # lazy: created on first non-'hand' request (avoids ultralytics import at boot)
         self.hand_detector = self._init_hand_detector()
 
         # --- [추가] 손 위치 저장을 위한 캐시 변수 ---
@@ -123,6 +122,9 @@ class ObjectDetectionNode(Node):
 
     def _get_yolo_target_pixel(self, target):
         """YOLO: 객체 Bounding Box의 중심 픽셀 좌표 반환"""
+        if self.yolo_model is None:
+            from pick2build.yolo import YoloModel
+            self.yolo_model = YoloModel()
         box, score = self.yolo_model.get_best_detection(self.img_node, target)
         if box is not None:
             # box: [x1, y1, x2, y2]
