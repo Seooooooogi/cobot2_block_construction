@@ -7,11 +7,10 @@ import {
   CANVAS_W,
   CANVAS_H,
   GRID_SIZE,
-  ROS_BRIDGE_URL,
-  CMD_TOPIC_NAME,
 } from './constants';
 import { useBlueprintIO } from './hooks/useBlueprintIO';
 import { useDragDrop } from './hooks/useDragDrop';
+import { useROS } from './hooks/useROS';
 
 const BlueprintEditor = () => {
   const [placedBlocks, setPlacedBlocks] = useState([]);
@@ -28,9 +27,7 @@ const BlueprintEditor = () => {
   const [zoomLevel, setZoomLevel] = useState(0.8);
   const canvasAreaRef = useRef(null);
 
-  // ROS 상태 관리
-  const rosRef = useRef(null);
-  const [rosStatus, setRosStatus] = useState('연결 안됨 ⚪');
+  // ROS 통신은 useROS hook이 책임 (rosRef/rosStatus는 hook이 소유).
   const [isProcessing, setIsProcessing] = useState(false);
 
   // 로봇 작업 진행 상태 (대기 중, 진행 중, 일시 정지 등)
@@ -72,44 +69,13 @@ const BlueprintEditor = () => {
   const xAxisLabels = Array.from({ length: 81 }, (_, i) => i);
   const yAxisLabels = Array.from({ length: 49 }, (_, i) => i);
 
-  // 컴포넌트 마운트 시 ROS 연결
-  useEffect(() => {
-    connectROS();
-    return () => {
-      if (rosRef.current) rosRef.current.close();
-    };
-  }, []);
-
-  const connectROS = () => {
-    setRosStatus('연결 시도 중... 🟡');
-    try {
-      const ros = new ROSLIB.Ros({ url: ROS_BRIDGE_URL });
-      ros.on('connection', () => {
-        setRosStatus('연결 완료 🟢');
-        rosRef.current = ros;
-
-        // 로봇이 블록 배치를 완료할 때마다 보내는 ID 수신
-        const signalIdTopic = new ROSLIB.Topic({
-          ros: ros,
-          name: '/signal_id',
-          messageType: 'std_msgs/msg/Int32'
-        });
-
-        signalIdTopic.subscribe((message) => {
-          console.log('[로봇 완료 응답] 놓은 블록 ID:', message.data);
-          // 기존에 배열에 없는 ID면 배열에 추가하여 상태 업데이트
-          setCompletedBlockIds((prev) => {
-            if (!prev.includes(message.data)) return [...prev, message.data];
-            return prev;
-          });
-        });
-      });
-      ros.on('error', () => setRosStatus('연결 에러 🔴'));
-      ros.on('close', () => setRosStatus('연결 끊김 ⚪'));
-    } catch (e) {
-      setRosStatus('초기화 에러 🔴');
-    }
-  };
+  // ROS 연결·구독·서비스·publish 책임은 useROS hook으로 일임.
+  // hook 내부에서 마운트 시 자동 connect + /signal_id 구독 + 언마운트 시 close 처리.
+  const { rosStatus, callSignalService, publishBlockInfo } = useROS({
+    setCompletedBlockIds,
+    setTotalSentCount,
+    setRobotWorkingStatus,
+  });
 
   // 브라우저 줌 방지 및 캔버스 전용 줌 (Native Event)
   useEffect(() => {
@@ -203,197 +169,44 @@ const BlueprintEditor = () => {
     setSelectedId(null);
   };
 
-  // 블록 타입 문자열을 숫자로 변환하는 헬퍼 함수
-  const getBlockTypeNumber = (typeId) => {
-    const map = {
-      'b1x2': "1",   // 1x2 세로
-      'b2x1': "2",   // 2x1 가로
-      'b2x2_v': "3", // 2x2 세로
-      'b2x2_h': "4", // 2x2 가로
-      'b2x3': "5",   // 2x3 세로
-      'b3x2': "6"    // 3x2 가로
-    };
-    return map[typeId] || "1";
-  };
-
-  // 제어 명령(Stop/Start/Unlock) ROS Service 호출 함수
-  const callSignalService = (serviceName) => {
-    if (!rosRef.current || !rosRef.current.isConnected) {
-      alert("⚠️ 로봇(ROS)에 연결되어 있지 않습니다!");
-      return;
-    }
-
-    const signalService = new ROSLIB.Service({
-      ros: rosRef.current,
-      name: serviceName,
-      serviceType: 'std_srvs/srv/Trigger'
-    });
-
-    const request = new ROSLIB.ServiceRequest({});
-    signalService.callService(
-      request,
-      (result) => {
-        console.log(`[제어 명령 응답] 서비스: ${serviceName}, success: ${result.success}, message: ${result.message}`);
-
-        if (!result.success) {
-          alert(`⚠️ 제어 명령 실패: ${result.message}`);
-          return;
-        }
-
-        // 응답 수신 후 UI 상태 업데이트 (명령이 실제로 전달된 시점)
-        if (serviceName === '/signal_stop') {
-          setRobotWorkingStatus('일시 정지 ⏸️');
-        } else if (serviceName === '/signal_start') {
-          setRobotWorkingStatus('재개 🔄');
-          setTimeout(() => {
-            setRobotWorkingStatus('진행 중 🏗️');
-          }, 1500);
-        }
-      },
-      (error) => {
-        console.error(`[제어 명령 에러] 서비스: ${serviceName}, error: ${error}`);
-        alert(`⚠️ 제어 명령 호출 실패: ${error}`);
-      }
-    );
-  };
-
-  // ROS로 좌표 데이터 퍼블리시
+  /**
+   * 전체 설계도(모든 층) 전송.
+   * 빈 상태 가드 + isProcessing 토글만 책임지고, 실제 publish/payload 변환은 hook에 위임.
+   * 성공 시 모든 placedBlocks의 robotId를 hook이 반환한 idMap으로 갱신해
+   * 진행률 시각화에서 어느 블록이 어느 robotId인지 매칭되도록 한다.
+   */
   const publishToRobot = () => {
-    if (!rosRef.current || !rosRef.current.isConnected) {
-      alert("⚠️ 로봇(ROS)에 연결되어 있지 않습니다!");
-      return;
-    }
-
     if (placedBlocks.length === 0) {
       alert("⚠️ 배치된 블록이 없습니다.");
       return;
     }
     setIsProcessing(true);
-
-    // 로봇이 밑에서부터 차곡차곡 쌓을 수 있도록 정렬 (층 오름차순 -> Y축 -> X축)
-    const sortedBlocks = [...placedBlocks].sort((a, b) => {
-      if (a.level !== b.level) return a.level - b.level;
-      if (a.y !== b.y) return a.y - b.y;
-      return a.x - b.x;
-    });
-
-    const idMap = {}; // 블록의 고유 id(Date.now)에 매칭될 부여된 로봇 전송 ID (1, 2, 3...)
-
-    // 요구사항에 맞춘 JSON 배열 데이터 생성
-    const payloadData = sortedBlocks.map((block, index) => {
-      // 1. 블록의 픽셀 좌표를 격자 단위(0~40, 0~24)로 변환
-      const gridX = block.x / GRID_SIZE;
-      const gridY = block.y / GRID_SIZE;
-      
-      // 2. 블록의 중심점 좌표 구하기 (격자 단위)
-      const centerX = gridX + (block.w / 2);
-      const centerY = gridY + (block.h / 2);
-
-      // 3. 로봇 좌표계(0~80, 0~48)로 변환 (격자 * 2)
-      const robotX = centerX * 2;
-      const robotY = centerY * 2;
-
-      const robotId = index + 1;
-      idMap[block.id] = robotId; // 전송 ID 기록
-
-      return {
-        id: robotId, // 요구사항에 따른 1부터 시작하는 index
-        type: getBlockTypeNumber(block.typeId),
-        level: block.level,
-        help: !!block.help,
-        coordinate: {
-          x: robotX,
-          y: robotY
-        }
-      };
-    });
-
-    // 기존 블록 상태에 부여된 robotId 업데이트 (화면 시각화를 위함)
-    setPlacedBlocks(placedBlocks.map(b => ({ ...b, robotId: idMap[b.id] })));
-    // 진행률 바 초기화
-    setTotalSentCount(payloadData.length);
-    setCompletedBlockIds([]);
-
-    setRobotWorkingStatus('건설중 🏗️'); // 설계도 전송 시 상태를 '진행 중'으로 설정
-
-    const cmdTopic = new ROSLIB.Topic({
-      ros: rosRef.current,
-      name: CMD_TOPIC_NAME,
-      messageType: 'std_msgs/String'
-    });
-
-    const jsonString = JSON.stringify(payloadData);
-    
-    console.log("Publishing Target Data:", jsonString);
-    cmdTopic.publish({ data: jsonString });
-
-    alert(`✅ ${placedBlocks.length}개의 블록 좌표를 전송했습니다!`);
+    const result = publishBlockInfo(placedBlocks);
+    if (result) {
+      setPlacedBlocks(placedBlocks.map(b => ({ ...b, robotId: result.idMap[b.id] })));
+      alert(`✅ ${placedBlocks.length}개의 블록 좌표를 전송했습니다!`);
+    }
     setIsProcessing(false);
   };
 
-  // --- 현재 층의 좌표 데이터만 ROS로 퍼블리시 ---
-const publishCurrentLevelToRobot = () => {
-    if (!rosRef.current || !rosRef.current.isConnected) {
-      alert("⚠️ 로봇(ROS)에 연결되어 있지 않습니다!");
-      return;
-    }
-
-    // 현재 층에 해당하는 블록만 필터링
+  /**
+   * 현재 층의 설계도만 전송.
+   * 현재 층에 블록이 없으면 alert 후 종료. 성공 시 현재 층 블록의 robotId만 갱신.
+   */
+  const publishCurrentLevelToRobot = () => {
     const currentBlocks = placedBlocks.filter(b => b.level === currentLevel);
-
     if (currentBlocks.length === 0) {
       alert(`⚠️ 현재 층(Level ${currentLevel})에 배치된 블록이 없습니다.`);
       return;
     }
-
     setIsProcessing(true);
-
-    // 현재 층 내에서만 정렬 (Y축 -> X축 순서)
-    const sortedBlocks = [...currentBlocks].sort((a, b) => {
-      if (a.y !== b.y) return a.y - b.y;
-      return a.x - b.x;
-    });
-
-    const idMap = {};
-
-    const payloadData = sortedBlocks.map((block, index) => {
-      const gridX = block.x / GRID_SIZE;
-      const gridY = block.y / GRID_SIZE;
-      const centerX = gridX + (block.w / 2);
-      const centerY = gridY + (block.h / 2);
-      const robotX = centerX * 2;
-      const robotY = centerY * 2;
-
-      const robotId = index + 1;
-      idMap[block.id] = robotId;
-
-      return {
-        id: robotId,
-        type: getBlockTypeNumber(block.typeId),
-        level: block.level,
-        help: !!block.help,
-        coordinate: { x: robotX, y: robotY }
-      };
-    });
-
-    // robotId 업데이트 및 진행률 초기화
-    setPlacedBlocks(placedBlocks.map(b => 
-      b.level === currentLevel ? { ...b, robotId: idMap[b.id] } : b
-    ));
-    setTotalSentCount(payloadData.length);
-    setCompletedBlockIds([]);
-    setRobotWorkingStatus('건설중 🏗️');
-
-    const cmdTopic = new ROSLIB.Topic({
-      ros: rosRef.current,
-      name: CMD_TOPIC_NAME,
-      messageType: 'std_msgs/String'
-    });
-
-    const jsonString = JSON.stringify(payloadData);
-    cmdTopic.publish({ data: jsonString });
-
-    alert(`✅ Level ${currentLevel}의 블록 ${currentBlocks.length}개 좌표를 전송했습니다!`);
+    const result = publishBlockInfo(currentBlocks);
+    if (result) {
+      setPlacedBlocks(placedBlocks.map(b =>
+        b.level === currentLevel ? { ...b, robotId: result.idMap[b.id] } : b
+      ));
+      alert(`✅ Level ${currentLevel}의 블록 ${currentBlocks.length}개 좌표를 전송했습니다!`);
+    }
     setIsProcessing(false);
   };
 
