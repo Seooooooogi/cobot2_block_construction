@@ -10,6 +10,7 @@ import {
   ROS_BRIDGE_URL,
   CMD_TOPIC_NAME,
 } from './constants';
+import { useBlueprintIO } from './hooks/useBlueprintIO';
 
 const BlueprintEditor = () => {
   const [placedBlocks, setPlacedBlocks] = useState([]);
@@ -524,78 +525,17 @@ const publishCurrentLevelToRobot = () => {
     return '';
   };
 
-  // --- 설계도 저장 및 불러오기 로직 ---
-
-// 1. 설계도를 JSON 파일로 저장 (파일명: 년_월_일_시_분)
-const saveBlueprintToFile = () => {
-    if (placedBlocks.length === 0) {
-      alert("저장할 블록 정보가 없습니다.");
-      return;
-    }
-
-    // 날짜 및 시간 데이터 추출
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const date = now.getDate();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-
-    // ✅ 초를 제외한 파일명 생성 (예: JIUM_Blueprint_2026-2-25_1945.json)
-    const fileName = `JIUM_Blueprint_${year}-${month}-${date}_${hours}${minutes}.json`;
-
-    const dataToSave = {
-      version: "1.0",
-      savedAt: now.toISOString(),
-      levels: levels,
-      blocks: placedBlocks
-    };
-
-    const jsonString = JSON.stringify(dataToSave, null, 2);
-    const blob = new Blob([jsonString], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName; 
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  // 2. JSON 파일을 읽어서 설계도 복원 (불러오기)
-  const loadBlueprintFromFile = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const importedData = JSON.parse(event.target.result);
-
-        // 간단한 데이터 유효성 검사
-        if (!importedData.blocks || !Array.isArray(importedData.blocks)) {
-          throw new Error("유효한 설계도 파일이 아닙니다.");
-        }
-
-        if (window.confirm("새 설계도를 불러오시겠습니까? 현재 작업 중인 내용은 사라집니다.")) {
-          // 상태 업데이트: 블록, 층 정보, 현재 층 초기화
-          setPlacedBlocks(importedData.blocks);
-          setLevels(importedData.levels || [1]);
-          setCurrentLevel(1); // 불러온 후 1층부터 보여줌
-          setSelectedId(null);
-          alert("✅ 설계도를 성공적으로 불러왔습니다!");
-        }
-      } catch (err) {
-        alert("⚠️ 파일을 읽는 중 오류가 발생했습니다: " + err.message);
-      }
-    };
-    reader.readAsText(file);
-    
-    // 같은 파일을 다시 선택할 수 있도록 input 초기화
-    e.target.value = "";
-  };
+  // --- 설계도 저장 및 불러오기 ---
+  // 파일 IO 책임은 useBlueprintIO hook으로 분리되어 있다.
+  // hook은 placedBlocks/levels를 읽어 export하고, 불러오기 시 4개 setter로 상태를 갱신.
+  const { saveBlueprintToFile, loadBlueprintFromFile } = useBlueprintIO({
+    placedBlocks,
+    levels,
+    setPlacedBlocks,
+    setLevels,
+    setCurrentLevel,
+    setSelectedId,
+  });
 
   return (
     <div className="project-container">
