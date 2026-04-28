@@ -20,7 +20,6 @@ import numpy as np
 import trimesh
 import torch
 from ultralytics import YOLO
-from scipy.spatial.transform import Rotation as R
 
 from estimater import *
 
@@ -30,6 +29,12 @@ from std_msgs.msg import Float64MultiArray, Int32
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
 from tf2_msgs.msg import TFMessage
+
+from zium_detection.pose_geometry import (
+    build_tf_matrix,
+    classify_lego_pose,
+    compute_gripping_point,
+)
 
 
 class FoundationPoseManager(Node):
@@ -117,30 +122,17 @@ class FoundationPoseManager(Node):
             parent = transform.header.frame_id
             child = transform.child_frame_id
             key = f"{parent}_to_{child}"
-            mat = np.eye(4)
-            mat[:3, :3] = R.from_quat([
-                transform.transform.rotation.x, 
-                transform.transform.rotation.y, 
-                transform.transform.rotation.z, 
-                transform.transform.rotation.w
-            ]).as_matrix()
-            mat[:3, 3] = [
-                transform.transform.translation.x, 
-                transform.transform.translation.y, 
-                transform.transform.translation.z
-            ]
-            self.tf_buffer[key] = mat
-        
-        req_keys = ['base_link_to_link_1', 'link_1_to_link_2', 'link_2_to_link_3', 
+            self.tf_buffer[key] = build_tf_matrix(transform)
+
+        req_keys = ['base_link_to_link_1', 'link_1_to_link_2', 'link_2_to_link_3',
                     'link_3_to_link_4', 'link_4_to_link_5', 'link_5_to_link_6']
-        
+
         if all(k in self.tf_buffer for k in req_keys):
             T = np.eye(4)
             for k in req_keys:
                 T = T @ self.tf_buffer[k]
-            self.current_T_base2gripper = T        
+            self.current_T_base2gripper = T
 
-    # [기존 로직 유지] tf_callback, _load_meshes, get_gripping_points ...
     def _load_meshes(self):
         for f in self.mesh_files:
             path = os.path.join(self.mesh_dir, f)
@@ -168,61 +160,6 @@ class FoundationPoseManager(Node):
             )
 
 
-    def classify_lego_pose(self, rot_matrix):
-        # 로봇 베이스 Z축 대비 레고 로컬 축의 방향 판별
-        base_z = np.array([0, 0, 1])
-        local_x = rot_matrix @ np.array([1, 0, 0])
-        local_y = rot_matrix @ np.array([0, 1, 0])
-        local_z = rot_matrix @ np.array([0, 0, 1])
-        
-        dot_x = np.dot(local_x, base_z)
-        dot_y = np.dot(local_y, base_z)
-        dot_z = np.dot(local_z, base_z)
-        
-        if dot_z > 0.8: return "UPRIGHT", 0.0
-        elif dot_z < -0.8: return "INVERTED", 1.0
-        elif abs(dot_y) > 0.8: return "SIDE", 2.0
-        elif abs(dot_x) > 0.8: return "FRONT", 3.0
-        else: return "UNKNOWN", -1.0
-
-    def get_gripping_points(self, pose_in_cam, model_name):
-        if self.current_T_base2gripper is None: 
-            return None, (None, None, None)
-        
-        # 1. 위치 계산 (카메라 좌표 -> 베이스 좌표)
-        cam_top_center = pose_in_cam @ np.array([0, 0, 0, 1])
-        T_g2c_m = self.T_gripper2cam.copy()
-        if np.any(np.abs(T_g2c_m[:3, 3]) > 5.0): 
-            T_g2c_m[:3, 3] /= 1000.0
-            
-        T_base2cam = self.current_T_base2gripper @ T_g2c_m
-        base_top_center = T_base2cam @ cam_top_center
-        
-        # 단위 변환 (m -> mm) 및 오프셋(-260) 적용
-        bx = base_top_center[0] * 1000
-        by = base_top_center[1] * 1000
-        bz = (base_top_center[2] * 1000) - 260
-        
-        # 2. 자세 계산 (절대 각도)
-        T_base2obj = T_base2cam @ pose_in_cam
-        rot_matrix = T_base2obj[:3, :3]
-        
-        # Scipy를 이용한 Roll(RX), Pitch(RY) 추출
-        euler_angles = R.from_matrix(rot_matrix).as_euler('xyz', degrees=True)
-        roll, pitch = euler_angles[0], euler_angles[1]
-        
-        # Yaw(RZ) 계산 및 -180 ~ 180 범위 조정
-        obj_x_in_base = rot_matrix @ np.array([1, 0, 0])
-        yaw = np.degrees(np.arctan2(obj_x_in_base[1], obj_x_in_base[0])) + 90
-        
-        if yaw > 180:
-            yaw -= 360
-        elif yaw < -180:
-            yaw += 360
-            
-        return (bx, by, bz), (roll, pitch, yaw), rot_matrix
-        
-    
     def show_yolo_detection_window(self, color_img, all_dets, best_det):
         """
         YOLO 탐색 단계 전용 시각화 창 (선정된 타겟은 빨간색, 나머지는 초록색)
@@ -328,19 +265,21 @@ class FoundationPoseManager(Node):
                                 cp_pose = self.last_pose @ np.linalg.inv(self.to_origins[self.active_model])
                                 
                                 # 베이스 좌표계 기준 좌표 및 각도 계산
-                                result = self.get_gripping_points(cp_pose, self.active_model)
-                                
-                                # [논리 구조 보완] 반환된 튜플의 길이를 확인하여 안전하게 언패킹
-                                if len(result) == 3:
-                                    coords, angles, rot_mat = result
-                                    if coords is not None and angles[0] is not None:
-                                        # 레고의 포즈 상태(코드) 판별
-                                        pose_name, pose_code = self.classify_lego_pose(rot_mat)
-                                        # XYZ(3) + RPY(3) + PoseCode(1) = 총 7개 데이터 저장
-                                        self.pose_buffer.append([
-                                            coords[0], coords[1], coords[2],
-                                            angles[0], angles[1], angles[2], pose_code
-                                        ])
+                                # current_T_base2gripper 가 아직 채워지지 않았으면 다음 프레임에 재시도.
+                                if self.current_T_base2gripper is None:
+                                    continue
+
+                                coords, angles, rot_mat = compute_gripping_point(
+                                    cp_pose, self.T_gripper2cam, self.current_T_base2gripper
+                                )
+                                if coords is not None and angles[0] is not None:
+                                    # 레고의 포즈 상태(코드) 판별
+                                    pose_name, pose_code = classify_lego_pose(rot_mat)
+                                    # XYZ(3) + RPY(3) + PoseCode(1) = 총 7개 데이터 저장
+                                    self.pose_buffer.append([
+                                        coords[0], coords[1], coords[2],
+                                        angles[0], angles[1], angles[2], pose_code
+                                    ])
 
                         # 시각화: 추적 중인 객체의 3D 박스와 축 그리기
                         if self.last_pose is not None:
