@@ -60,6 +60,7 @@ RUN add-apt-repository universe \
     ros-humble-tf2-msgs \
     ros-humble-tf2-ros \
     ros-humble-rmw-fastrtps-cpp \
+    ros-humble-rmw-cyclonedds-cpp \
     python3-colcon-common-extensions \
     python3-argcomplete \
     python3-rosdep \
