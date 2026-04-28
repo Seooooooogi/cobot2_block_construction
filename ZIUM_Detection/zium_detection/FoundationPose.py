@@ -35,6 +35,7 @@ from zium_detection.pose_geometry import (
     classify_lego_pose,
     compute_gripping_point,
 )
+from zium_detection.vis_utils import draw_yolo_detections
 
 
 class FoundationPoseManager(Node):
@@ -161,38 +162,12 @@ class FoundationPoseManager(Node):
 
 
     def show_yolo_detection_window(self, color_img, all_dets, best_det):
-        """
-        YOLO 탐색 단계 전용 시각화 창 (선정된 타겟은 빨간색, 나머지는 초록색)
-        """
-        yolo_vis = color_img.copy()
-        
-        for det in all_dets:
-            box = det.xyxy[0].cpu().numpy().astype(int)
-            conf = det.conf[0].item()
-            cls = int(det.cls[0].item())
-            
-            # 기본 색상: 초록색 (BGR)
-            color = (0, 255, 0)
-            label = f"ID:{cls} {conf:.2f}"
-            
-            # 만약 현재 검출된 박스가 'best_det'와 일치하면 빨간색으로 변경
-            if best_det is not None and torch.equal(det.xyxy[0], best_det.xyxy[0]):
-                color = (0, 0, 255) # 빨간색
-                label = f"TARGET LOCKED: {label}"
-                # 빨간색 박스는 더 두껍게 강조
-                cv2.rectangle(yolo_vis, (box[0], box[1]), (box[2], box[3]), color, 3)
-            else:
-                cv2.rectangle(yolo_vis, (box[0], box[1]), (box[2], box[3]), color, 2)
-                
-            cv2.putText(yolo_vis, label, (box[0], box[1] - 10), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-        # 창 이름 설정 및 출력
-        win_name = "YOLO Detection Stage (Static Snapshot)"
-        cv2.imshow(win_name, yolo_vis)
+        """YOLO 탐색 단계 전용 시각화 창. 그리기는 vis_utils 에 위임, 화면 표시만 담당."""
+        yolo_vis = draw_yolo_detections(color_img, all_dets, best_det)
+        cv2.imshow("YOLO Detection Stage (Static Snapshot)", yolo_vis)
         cv2.waitKey(1)
-        # yolo 연산이 끝나면 이 시점의 이미지가 창에 고정(멈춤)됩니다.
-        
+
+
     def run(self):
         cv2.namedWindow("RG2 Tracking (Multi-Pose Mode)")
         try:
