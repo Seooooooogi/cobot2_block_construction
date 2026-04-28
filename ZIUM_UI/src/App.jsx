@@ -11,6 +11,7 @@ import {
   CMD_TOPIC_NAME,
 } from './constants';
 import { useBlueprintIO } from './hooks/useBlueprintIO';
+import { useDragDrop } from './hooks/useDragDrop';
 
 const BlueprintEditor = () => {
   const [placedBlocks, setPlacedBlocks] = useState([]);
@@ -22,11 +23,6 @@ const BlueprintEditor = () => {
   // --- 진행률 관리를 위한 상태 ---
   const [totalSentCount, setTotalSentCount] = useState(0);       // 전송한 총 블록 개수
   const [completedBlockIds, setCompletedBlockIds] = useState([]); // 로봇이 배치 완료한 ID 배열 (/signal_id)
-
-  // 드래그 중인 블록의 정보를 저장
-  const [activeDragInfo, setActiveDragInfo] = useState(null);
-  // 프리뷰 위치 및 유효성 상태
-  const [dragPreview, setDragPreview] = useState(null);
 
   // 확대/축소 상태 (기본 1.0)
   const [zoomLevel, setZoomLevel] = useState(0.8);
@@ -145,123 +141,28 @@ const BlueprintEditor = () => {
     }
   }, []);
 
-  // 충돌 검사 로직
-  const checkOverlap = (newX, newY, newW, newH, excludeId = null) => {
-    return placedBlocks.some((block) => {
-      // ✅ 현재 층(currentLevel)이 아닌 블록은 충돌 검사에서 무시합니다! (겹쳐 쌓기 허용)
-      if (block.level !== currentLevel) return false;
+  // --- 드래그앤드롭 ---
+  // CREATE/MOVE 시나리오, 프리뷰, 충돌 검사 모두 useDragDrop hook이 책임진다.
+  // hook은 placedBlocks/currentLevel/zoomLevel을 읽어 좌표를 계산하고,
+  // setPlacedBlocks/setSelectedId를 통해 결과를 반영한다.
+  const {
+    activeDragInfo,
+    dragPreview,
+    setDragPreview,
+    onDragStartNew,
+    onDragStartExisting,
+    onDragOver,
+    onDrop,
+  } = useDragDrop({
+    placedBlocks,
+    currentLevel,
+    zoomLevel,
+    canvasAreaRef,
+    setPlacedBlocks,
+    setSelectedId,
+  });
 
-      if (excludeId && block.id === excludeId) return false;
-      const isXOverlap = newX < block.x + block.w * GRID_SIZE && newX + newW * GRID_SIZE > block.x;
-      const isYOverlap = newY < block.y + block.h * GRID_SIZE && newY + newH * GRID_SIZE > block.y;
-      return isXOverlap && isYOverlap;
-    });
-  };
 
-  // 투명한 드래그 이미지를 미리 생성해둡니다.
-  const transparentImg = useRef(new Image());
-  useEffect(() => {
-    // 1x1 크기의 투명한 GIF 데이터
-    transparentImg.current.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-  }, []);
-
-  // 1. 신규 블록 드래그 시작
-  const onDragStartNew = (e, blockType) => {
-    e.dataTransfer.setData('actionType', 'CREATE');
-    e.dataTransfer.setData('blockType', JSON.stringify(blockType));
-
-    // 브라우저 기본 드래그 이미지를 투명하게 설정
-    if (e.dataTransfer.setDragImage) {
-      e.dataTransfer.setDragImage(transparentImg.current, 0, 0);
-    }
-
-    setActiveDragInfo({ w: blockType.w, h: blockType.h, id: null });
-  };
-
-  // 2. 기존 블록 드래그 시작 (이동용)
-  const onDragStartExisting = (e, id) => {
-    const block = placedBlocks.find(b => b.id === id);
-    e.dataTransfer.setData('actionType', 'MOVE');
-    e.dataTransfer.setData('blockId', id);
-    setSelectedId(id); 
-
-    // 브라우저 기본 드래그 이미지를 투명하게 설정
-    if (e.dataTransfer.setDragImage) {
-      e.dataTransfer.setDragImage(transparentImg.current, 0, 0);
-    }
-    
-    setActiveDragInfo({ w: block.w, h: block.h, id: block.id });
-  };
-
-  const onDragOver = (e) => {
-    e.preventDefault();
-    if (!activeDragInfo || !canvasAreaRef.current) return;
-
-    const container = canvasAreaRef.current;
-    const rect = e.currentTarget.getBoundingClientRect();
-
-    // 브라우저 뷰포트 내 마우스 상대 좌표 (패딩 제외)
-    const padding = 40;
-    const offsetX = e.clientX - rect.left - padding;
-    const offsetY = e.clientY - rect.top - padding;
-
-    // 좌표 보정: (마우스 위치 + 스크롤 양) / 배율
-    const mouseX = (offsetX + container.scrollLeft) / zoomLevel;
-    const mouseY = (offsetY + container.scrollTop) / zoomLevel;
-    
-    // 블록의 중심이 마우스 끝에 오도록 좌상단(x, y) 좌표 계산
-    const blockW = activeDragInfo.w * GRID_SIZE;
-    const blockH = activeDragInfo.h * GRID_SIZE;
-
-    // 중심점 기준 좌표 계산
-    const newX = mouseX - blockW / 2;
-    const newY = mouseY - blockH / 2;
-
-    let snappedX = Math.round(newX / GRID_SIZE) * GRID_SIZE;
-    let snappedY = Math.round(newY / GRID_SIZE) * GRID_SIZE;
-
-    // 24x40 영역 밖으로 나가지 않도록 경계 제한
-    snappedX = Math.max(0, Math.min(snappedX, CANVAS_W - blockW));
-    snappedY = Math.max(0, Math.min(snappedY, CANVAS_H - blockH));
-
-    const isOverlap = checkOverlap(snappedX, snappedY, activeDragInfo.w, activeDragInfo.h, activeDragInfo.id);
-
-    setDragPreview({
-      x: snappedX,
-      y: snappedY,
-      w: activeDragInfo.w,
-      h: activeDragInfo.h,
-      isValid: !isOverlap
-    });
-  };
-
-  // const onDragLeave = () => {
-  //   setDragPreview(null);
-  // };
-
-  const onDrop = (e) => {
-    e.preventDefault();
-    const actionType = e.dataTransfer.getData('actionType');
-    
-    // 드롭 시점에 프리뷰 데이터 활용
-    if (dragPreview && dragPreview.isValid) {
-      if (actionType === 'CREATE') {
-        const blockType = JSON.parse(e.dataTransfer.getData('blockType'));
-        setPlacedBlocks([...placedBlocks, { ...blockType, typeId: blockType.id, id: Date.now(), x: dragPreview.x, y: dragPreview.y, level: currentLevel, help: false }]);
-      } else if (actionType === 'MOVE') {
-        const blockId = Number(e.dataTransfer.getData('blockId'));
-        setPlacedBlocks(placedBlocks.map(block => 
-          block.id === blockId ? { ...block, x: dragPreview.x, y: dragPreview.y } : block
-        ));
-      }
-    } else if (dragPreview && !dragPreview.isValid) {
-      alert("⚠️ 다른 블록과 겹치는 위치에는 놓을 수 없습니다.");
-    }
-
-    setDragPreview(null);
-    setActiveDragInfo(null);
-  };
-  
   const deleteBlock = () => {
     setPlacedBlocks(placedBlocks.filter(block => block.id !== selectedId));
     setSelectedId(null);
