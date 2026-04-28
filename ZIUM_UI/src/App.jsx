@@ -2,23 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 // import * as ROSLIB from 'roslib';
 import './App.css';
 import logoImg from './logo.png';
-
-const BLOCK_TYPES = [
-  { id: 'b1x2', label: '1 X 2 (세로)', w: 1, h: 2, color: '#9b59b6' },
-  { id: 'b2x1', label: '2 X 1 (가로)', w: 2, h: 1, color: '#3498db' },
-  { id: 'b2x2_v', label: '2 X 2 (세로)', w: 2, h: 2, color: '#f1c40f' },
-  { id: 'b2x2_h', label: '2 X 2 (가로)', w: 2, h: 2, color: '#f39c12' },
-  { id: 'b2x3', label: '2 X 3 (세로)', w: 2, h: 3, color: '#e67e22' },
-  { id: 'b3x2', label: '3 X 2 (가로)', w: 3, h: 2, color: '#e74c3c' },
-];
-
-const CANVAS_W = 2000; // 40칸
-const CANVAS_H = 1200; // 24칸
-const GRID_SIZE = 50; 
-
-// ROS 통신 및 토픽 설정
-const ROS_BRIDGE_URL = `ws://${window.location.hostname}:9090`;
-const CMD_TOPIC_NAME = '/block/info'; // 봇이 구독하는 토픽명으로 수정 필요
+import {
+  BLOCK_TYPES,
+  CANVAS_W,
+  CANVAS_H,
+  GRID_SIZE,
+  ROS_BRIDGE_URL,
+  CMD_TOPIC_NAME,
+} from './constants';
 
 const BlueprintEditor = () => {
   const [placedBlocks, setPlacedBlocks] = useState([]);
