@@ -48,8 +48,8 @@ BRIEF.md
 # Docs (maintained separately)
 docs/
 
-# FoundationPose upstream (cloned external code, fetched inside Dockerfile)
-ZIUM_Detection/FoundationPose-main/
+# FoundationPose upstream snapshot — code committed on this branch, weights fetched separately
+ZIUM_Detection/FoundationPose-main/weights/
 
 # Firebase Data Connect (local scaffolding, not part of repo)
 /dataconnect/
