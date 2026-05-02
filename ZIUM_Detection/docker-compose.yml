@@ -10,16 +10,18 @@ services:
     image: zium-detection:humble-cu118
     container_name: zium-detection
     network_mode: host
+    ipc: host
     # privileged 제거: 컨테이너는 RealSense USB 직접 안 잡음 (host에서 realsense2_camera 노드가 캡처).
     # FoundationPose는 image topic을 ROS로만 구독.
     environment:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
-      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
       - XAUTHORITY=/tmp/.docker.xauth
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${XAUTHORITY:-/tmp/.docker.xauth}:/tmp/.docker.xauth:rw

@@ -9,6 +9,18 @@ AI(CV) 기반 협동 로봇(Doosan M0609)이 Intel RealSense로 레고 블록을
 
 ![System Architecture](assets/system.png)
 
+JIUM은 **단일 PC**에서 두 ROS 컴포넌트가 동작한다 — 모두 ROS2 Humble.
+
+- **호스트** (`pick2build`): M0609 제어, pick/place, RG2 그리퍼 제어.
+  Doosan TCP/IP + OnRobot Modbus + rosbridge(UI 연결).
+- **호스트** (`realsense2_camera`): RealSense USB 캡처, 카메라 토픽 발행.
+- **Docker 컨테이너** (`zium_detection`, image `zium-detection:humble-cu118`):
+  YOLO + FoundationPose 6-DoF 포즈 추정. CUDA 11.8 + cuDNN 격리.
+- **브라우저 클라이언트** (`ZIUM_UI`): React 관리자 대시보드.
+
+호스트와 컨테이너는 `network_mode: host` + 동일 `ROS_DOMAIN_ID`로 DDS 토픽을 공유한다.
+이전 dual-PC(Foxy ↔ Humble) 구조에서 단일 PC로 통합한 결과.
+
 ---
 
 ## 동작 플로우차트
@@ -19,11 +31,13 @@ AI(CV) 기반 협동 로봇(Doosan M0609)이 Intel RealSense로 레고 블록을
 
 ## 요구사항
 
-### Control PC
+### 호스트 (단일 PC)
 
 - Ubuntu 22.04
 - ROS2 Humble
 - Node.js 18+ (ZIUM_UI)
+
+**시스템 / Python 의존성**
 
 ```bash
 sudo apt update
@@ -33,20 +47,27 @@ sudo apt install ros-humble-rosbridge-server
 sudo apt install ros-humble-sensor-msgs
 sudo apt install ros-humble-cv-bridge
 
-# 그리퍼 드라이버 의존성
+# 그리퍼 드라이버
 pip3 install pymodbus==3.3.2
 
 # pick2build Python 의존성
 pip3 install -r ZIUM_Control/requirements.txt
 ```
 
-### Detection PC
+**Doosan 공식 패키지 (`dsr_msgs2` 포함)**
 
-- Ubuntu 20.04
-- Docker (NVIDIA Container Toolkit 포함)
-- CUDA 11.x 이상
-- ROS Foxy (Docker 컨테이너 내부)
-- Intel RealSense SDK 2.0
+```bash
+cd ~/cobot2_block_construction/ZIUM_Control
+git clone https://github.com/doosan-robotics/doosan-robot2
+```
+
+`od_msg` (커스텀 서비스 메시지)는 레포 내장 (`ZIUM_Control/od_msg/`) — 별도 clone 불필요.
+
+### Detection 컨테이너 (GPU 스택)
+
+- Docker + NVIDIA Container Toolkit
+- NVIDIA Driver 580+ (호스트), CUDA 11.8 + cuDNN (컨테이너 내부)
+- Intel RealSense SDK 2.0 (호스트 `realsense2_camera` 노드가 캡처)
 
 ---
 
@@ -54,28 +75,14 @@ pip3 install -r ZIUM_Control/requirements.txt
 
 > - 로봇 IP: `192.168.1.100`
 > - 그리퍼 Modbus IP: `192.168.1.1` (OnRobot Compute Box, 고정)
-> - Control PC와 Detection PC는 동일 LAN에 연결되어야 함
-> - `ROS_DOMAIN_ID`를 양쪽 동일하게 설정해야 DDS 통신이 가능
+> - `ROS_DOMAIN_ID` 환경변수를 셸에서 export하면 `docker-compose.yml`이 컨테이너로 전파한다
+>   (호스트 RealSense 노드 ↔ 컨테이너 Detection 노드 DDS 일치).
 >
-> UDP 포트 권한 설정 (Control PC, 최초 1회):
+> UDP 포트 권한 설정 (최초 1회):
 > ```bash
 > sudo sysctl -w net.ipv4.ip_unprivileged_port_start=0
 > echo 'net.ipv4.ip_unprivileged_port_start=0' | sudo tee /etc/sysctl.d/99-ros2-doosan.conf
 > ```
-
----
-
-## 의존성 패키지 설치
-
-`od_msg` (커스텀 서비스 메시지)는 이 레포지토리의 `ZIUM_Control/od_msg/`에 포함되어 있다.  
-`dsr_msgs2`는 아래 Doosan 패키지 안에 포함되어 있다.
-
-```bash
-cd ~/cobot2_block_construction/ZIUM_Control
-
-# Doosan 공식 패키지 (dsr_msgs2 포함)
-git clone https://github.com/doosan-robotics/doosan-robot2
-```
 
 ---
 
@@ -95,7 +102,7 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 
 ## 빌드
 
-### Control PC
+### Control 패키지 (`pick2build`, 호스트)
 
 ```bash
 cd ~/cobot2_block_construction/ZIUM_Control
@@ -104,15 +111,48 @@ colcon build
 source install/setup.bash
 ```
 
-### Detection PC (Docker 내부)
+### Detection 컨테이너 (Docker 이미지 빌드)
 
 ```bash
-# Docker 컨테이너 진입 후
-cd /path/to/ZIUM_Detection
-source /opt/ros/foxy/setup.bash
-colcon build
-source install/setup.bash
+cd ~/cobot2_block_construction
+./scripts/build_detection_docker.sh              # 캐시 사용
+./scripts/build_detection_docker.sh --no-cache   # 클린 빌드
 ```
+
+이미지 태그: `zium-detection:humble-cu118` (ROS2 Humble + CUDA 11.8 + FoundationPose + YOLO).
+컨테이너 내부 colcon 빌드는 Dockerfile 빌드 단계에서 자동 수행된다.
+
+`docker compose build` 직접 호출은 권장하지 않는다 — 노트북(Katana 17, RTX 4060) 환경에서
+heavy nvcc 컴파일 단계에 swap thrashing/freeze 위험이 있어 빌드 스크립트는
+`--memory=20g --memory-swap=20g`, `--progress=plain`, `tee build.log` 옵션을 항상 적용한다.
+(컴파일 잡 수 제한 `MAX_JOBS=4`는 Dockerfile ENV에 포함되어 빌드 경로와 무관하게 항상 적용됨.)
+
+### Detection 가중치 준비 (최초 1회)
+
+#### NVlabs FoundationPose 가중치 — 자동 다운로드
+
+```bash
+./scripts/download_foundationpose_weights.sh
+```
+
+스크립트가 수행하는 작업:
+- `gdown` 미설치 시 `pip install --user gdown` 자동 실행
+- NVlabs Drive 폴더 다운로드 → `ZIUM_Detection/FoundationPose-main/weights/` 직속 배치
+- Refiner (`2023-10-28-18-33-37/`, ~68M) + Scorer (`2024-01-11-20-02-45/`, ~190M)
+- 멱등성 — 이미 존재하면 skip
+
+#### 사용자 제공 자산 (별도 배치 필요)
+
+자동 다운로드 불가 — 학습 결과·캘리브레이션 데이터는 직접 배치한다.
+
+| 경로 | 설명 |
+|------|------|
+| `ZIUM_Detection/FoundationPose-main/weights/best.pt` | 커스텀 YOLO 학습 결과 (YOLOv11) |
+| `ZIUM_Detection/FoundationPose-main/weights/T_gripper2camera.npy` | 그리퍼↔카메라 외부 보정 행렬 |
+| `ZIUM_Detection/FoundationPose-main/demo_data/lego/mesh/*.obj` | 블록 3D 메시 파일 |
+
+컨테이너 시작 시 `ros_entrypoint.sh`가 위 가중치 누락을 검사해 경고 메시지를 `docker logs`
+첫 줄에 출력한다.
 
 ### UI
 
@@ -126,20 +166,26 @@ npm run dev
 
 ## 실행
 
-### 1. Detection PC — FoundationPose 노드 시작
+### 1. RealSense 노드 (호스트)
+
+컨테이너는 USB를 직접 잡지 않는다. 카메라 토픽은 호스트에서 발행한다.
 
 ```bash
-# Docker 컨테이너 내부
-source /opt/ros/foxy/setup.bash
-source install/setup.bash
-
-conda activate my
-ros2 run zium_detection foundation_pose \
-    --est_refine_iter 20 \
-    --track_refine_iter 20
+source /opt/ros/humble/setup.bash
+ros2 run realsense2_camera realsense2_camera_node \
+    --ros-args -p align_depth.enable:=true
 ```
 
-### 2. Control PC — 시스템 런치
+### 2. Detection 컨테이너 시작
+
+```bash
+docker compose -f ~/cobot2_block_construction/ZIUM_Detection/docker-compose.yml up -d
+docker logs -f zium-detection      # foundation_pose 노드가 image topic 수신 대기 진입했는지 확인
+```
+
+`docker-compose.yml`이 `ros2 launch zium_detection detection.launch.py`를 자동 실행한다.
+
+### 3. Control 노드 시스템 런치 (호스트)
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -154,9 +200,8 @@ ros2 launch pick2build run_system.launch.py
 |------|------|
 | `stage_place` | TopicListenerNode (토픽 수신) + RobotWorkerNode (pick/place/push), RobotSharedState 공유 |
 | `detection` | ObjectDetectionNode — `/get_3d_position` 서비스 |
-| `get_keyword` | GetKeyword — `/get_keyword` 서비스 (STT + LLM) |
 
-### 3. UI 시작
+### 4. UI 시작
 
 ```bash
 cd ~/cobot2_block_construction/ZIUM_UI
@@ -169,33 +214,39 @@ npm run dev
 
 ## ROS2 토픽 인터페이스
 
-### Control PC ↔ Detection PC
+### `pick2build` (호스트) ↔ `zium_detection` (컨테이너)
 
 | 토픽 | 타입 | 방향 | 설명 |
 |------|------|------|------|
-| `/dsr01/detection_start` | `std_msgs/Int32` | Control → Detection | 감지 시작 트리거 (블록 ID: 0·1·2) |
-| `/dsr01/target_lego_pose` | `std_msgs/Float64MultiArray` | Detection → Control | 블록 6-DoF 포즈 `[x, y, z, roll, pitch, yaw, pose_code]` (mm·deg) |
+| `/dsr01/detection_start` | `std_msgs/Int32` | pick2build → zium_detection | 감지 시작 트리거 (블록 ID: 0·1·2) |
+| `/dsr01/target_lego_pose` | `std_msgs/Float64MultiArray` | zium_detection → pick2build | 블록 6-DoF 포즈 `[x, y, z, roll, pitch, yaw, pose_code]` (mm·deg) |
 
 `pose_code`: `0.0`=UPRIGHT, `1.0`=INVERTED, `2.0`=SIDE, `3.0`=FRONT
 
-### Admin UI ↔ Control PC (rosbridge WebSocket)
+### Admin UI ↔ `pick2build` (rosbridge WebSocket)
+
+**Topic** (단방향 stream):
 
 | 토픽 | 타입 | 방향 | 설명 |
 |------|------|------|------|
-| `/block/info` | `std_msgs/String` (JSON) | UI → Control | 블록 배치 도면 정보 |
-| `/signal_id` | `std_msgs/Int32` | UI → Control | 작업 시작 신호 |
-| `/signal_stop` | `std_msgs/Int32` | UI → Control | 일시정지 |
-| `/signal_start` | `std_msgs/Int32` | UI → Control | 재개 |
-| `/signal_unlock` | `std_msgs/Int32` | UI → Control | 강제 재개 (E-Stop 해제) |
+| `/block/info` | `std_msgs/String` (JSON) | UI → pick2build | 블록 배치 도면 정보 (일괄 전송) |
+| `/signal_id` | `std_msgs/Int32` | pick2build → UI | 블록 배치 완료 ID 진행률 stream |
+
+**Service** (요청/응답, `std_srvs/Trigger`):
+
+| 서비스 | 방향 | 응답 메시지 | 설명 |
+|--------|------|-------------|------|
+| `/signal_stop` | UI → pick2build | `paused` | 일시정지 (state.is_paused=True) |
+| `/signal_start` | UI → pick2build | `resumed` | 재개 (state.is_paused=False) |
+| `/signal_unlock` | UI → pick2build | `unlocked` | 강제 재개 / E-Stop 해제 (state.needs_unlock=True) |
 
 ### pick2build 내부 서비스
 
 | 서비스 | 타입 | 제공 노드 | 설명 |
 |--------|------|-----------|------|
-| `/get_3d_position` | `od_msg/SrvDepthPosition` | `detection` | Control PC 카메라 기반 3D 좌표 반환 |
-| `/get_keyword` | `std_srvs/Trigger` | `get_keyword` | 음성 명령 → 키워드 추출 |
+| `/get_3d_position` | `od_msg/SrvDepthPosition` | `detection` | 호스트 측 별도 카메라 기반 3D 좌표 반환 |
 
-### Detection PC 카메라 토픽 (RealSense, DDS 브로드캐스트)
+### RealSense 카메라 토픽 (호스트 발행, DDS 브로드캐스트)
 
 | 토픽 | 타입 | 설명 |
 |------|------|------|
@@ -210,44 +261,51 @@ npm run dev
 ```
 cobot2_block_construction/
 │
-├── ZIUM_Control/                        # Control PC 워크스페이스
+├── ZIUM_Control/                        # 호스트 colcon 워크스페이스 (`pick2build`)
 │   ├── requirements.txt                 # pip 의존성 (rosdep 미포함 패키지)
 │   ├── od_msg/                          # 커스텀 서비스 메시지 패키지
 │   │   └── srv/
 │   │       └── SrvDepthPosition.srv     # string target / float64[] depth_position
 │   └── pick2build/                      # ROS2 패키지 (ament_python)
 │       ├── launch/
-│       │   └── run_system.launch.py     # stage_place + detection + get_keyword 실행
+│       │   └── run_system.launch.py     # stage_place + detection 실행
 │       ├── pick2build/
 │       │   ├── stage_place.py           # 메인 오케스트레이터 (RobotWorkerNode: pick/place/push)
 │       │   ├── topic_listener.py        # TopicListenerNode — /block/info, 제어 신호 수신
 │       │   ├── shared_state.py          # RobotSharedState — 노드 간 공유 상태 (Queue, pause 플래그)
 │       │   ├── config/
 │       │   │   └── robot_params.yaml    # 로봇 좌표·force threshold·블록 파라미터 (캘리브레이션 설정)
-│       │   ├── detection.py             # 물체·손 감지 노드 (YOLO + MediaPipe)
-│       │   ├── get_keyword.py           # 음성 명령 추출 노드 (Whisper STT + GPT-4o)
+│       │   ├── detection.py             # ObjectDetectionNode — /get_3d_position 서비스 제공
 │       │   ├── realsense.py             # 카메라 토픽 구독 헬퍼 (ImgNode)
 │       │   ├── yolo.py                  # YOLO 모델 래퍼 (YoloModel)
-│       │   ├── stt.py                   # OpenAI Whisper STT 헬퍼
-│       │   ├── MicController.py         # PyAudio 마이크 스트림 관리
 │       │   └── onrobot.py               # RG2 그리퍼 Modbus TCP 제어
 │       ├── resource/
-│       │   └── .env                     # OPENAI_API_KEY, TOOLCHARGER_IP, TOOLCHARGER_PORT
+│       │   └── .env                     # TOOLCHARGER_IP, TOOLCHARGER_PORT
 │       ├── package.xml
 │       └── setup.py
 │
-├── ZIUM_Detection/                      # ROS2 패키지 `zium_detection` (ament_python, ROS Foxy, Docker)
+├── ZIUM_Detection/                      # ROS2 패키지 `zium_detection` (Humble + CUDA 11.8 Docker)
+│   ├── Dockerfile                       # 컨테이너 이미지 정의 (FP + YOLO + ROS Humble)
+│   ├── docker-compose.yml               # 컨테이너 실행 설정 (network=host, GPU, 볼륨 마운트)
+│   ├── docker/
+│   │   └── ros_entrypoint.sh            # ROS env source + weights pre-flight 체크
+│   ├── launch/
+│   │   └── detection.launch.py          # foundation_pose_node 실행
 │   ├── zium_detection/
-│   │   └── FoundationPose.py            # 6-DoF 포즈 추정 노드 (YOLO + FoundationPose)
-│   ├── FoundationPose-main/
-│   │   ├── estimater.py                 # FoundationPose 추정기 라이브러리
-│   │   ├── weights/
-│   │   │   └── T_gripper2camera.npy     # 그리퍼↔카메라 외부 보정 행렬 (best.pt는 gitignore)
-│   │   └── demo_data/lego/
-│   │       ├── cam_K.txt                # 카메라 내부 파라미터 (fallback)
-│   │       └── mesh/                    # 블록 3D 메시 파일 (0.obj, 1.obj, 2.obj)
+│   │   └── FoundationPose.py            # 6-DoF 포즈 추정 노드 (YOLO + FoundationPose 통합)
+│   ├── FoundationPose-main/             # NVlabs upstream (.gitignore — Docker 빌드 시 자동 clone)
+│   │   ├── weights/                     # 가중치 디렉토리 (사용자가 준비)
+│   │   │   ├── 2023-10-28-18-33-37/     # FP Refiner — scripts/download_foundationpose_weights.sh
+│   │   │   ├── 2024-01-11-20-02-45/     # FP Scorer — 동일 스크립트로 자동 다운로드
+│   │   │   ├── best.pt                  # YOLO 커스텀 학습 결과 (사용자 제공)
+│   │   │   └── T_gripper2camera.npy     # 그리퍼↔카메라 외부 보정 (사용자 제공)
+│   │   └── demo_data/lego/mesh/         # LEGO 3D 메시 (사용자 제공)
 │   ├── package.xml
 │   └── setup.py
+│
+├── scripts/
+│   ├── build_detection_docker.sh        # Detection 이미지 빌드 (mitigation 옵션 포함)
+│   └── download_foundationpose_weights.sh  # NVlabs Refiner+Scorer 자동 다운로드
 │
 ├── ZIUM_UI/                             # 관리자 대시보드
 │   └── src/

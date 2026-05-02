@@ -5,8 +5,8 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    est_iter = DeclareLaunchArgument('est_refine_iter', default_value='20')
-    track_iter = DeclareLaunchArgument('track_refine_iter', default_value='20')
+    est_iter = DeclareLaunchArgument('est_refine_iter', default_value='5')
+    track_iter = DeclareLaunchArgument('track_refine_iter', default_value='5')
 
     return LaunchDescription([
         est_iter,
